@@ -1,0 +1,9 @@
+Changelog for OpenCoreRedirect
+
+    (name of developer listed in brackets)
+
+OpenCoreRedirect - 0.1 Unreleased
+
+    - Initial package structure.
+      [zopeskel]
+

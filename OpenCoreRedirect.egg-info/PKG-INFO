@@ -1,0 +1,14 @@
+Metadata-Version: 1.0
+Name: OpenCoreRedirect
+Version: 0.1dev
+Summary: UNKNOWN
+Home-page: http://openplans.org/projects/opencore
+Author: The Open Planning Project
+Author-email: opencore@lists.openplans.org
+License: GPL
+Description: UNKNOWN
+Platform: UNKNOWN
+Classifier: Framework :: Zope2
+Classifier: Framework :: Zope3
+Classifier: Programming Language :: Python
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
