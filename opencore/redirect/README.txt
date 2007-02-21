@@ -13,8 +13,8 @@ Main Components
 
 We have utility that stores keys to redirect upon::
 
-    >>> getUtility(IRedirectionMap)
-    <IRedirectionMap ...>
+    >>> getUtility(IRedirectMapping)
+    <OFSRedirectStore at /test_folder_1_/utilities/IRedirectMapping>
 
 We have a function to prune the path to create a key::
 
