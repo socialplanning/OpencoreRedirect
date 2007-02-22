@@ -1,7 +1,18 @@
-<configure
-    xmlns="http://namespaces.zope.org/zope"
-    xmlns:five="http://namespaces.zope.org/five">
+<configure xmlns="http://namespaces.zope.org/zope"
+           xmlns:browser="http://namespaces.zope.org/browser"
+	   xmlns:five="http://namespaces.zope.org/five">
+  <includeOverrides file="localsite.zcml" />
+  <browser:page
+     for="OFS.interfaces.IFolder"
+     class=".site.RedirectStoreInstallView"
+     permission="five.ManageSite"
+     template="install.pt"
+     name="opencore.redirector-install.html"
+     />
 
-    <five:registerPackage package="." initialize=".zope2.initialize" />
+   <five:implements 
+      class="opencore.redirect.RedirectStore"
+      interface="zope.app.annotation.interfaces.IAttributeAnnotatable"
+      />
 
 </configure>
