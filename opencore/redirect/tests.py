@@ -1,30 +1,45 @@
-import unittest
+import os, sys, unittest
+from zope.testing import doctest
+from collective.testing.layer import ZCMLLayer
 
 from zope.testing import doctestunit
+from zope.testing import doctest
 from zope.component import testing
 from Testing import ZopeTestCase as ztc
 
+import warnings; warnings.filterwarnings("ignore")
+
+optionflags = doctest.REPORT_ONLY_FIRST_FAILURE | doctest.ELLIPSIS
+
+from opencore.redirect.site import add_redirectstore
+
+def basic_setup(tc):
+    add_redirectstore(tc.folder)
+
 def test_suite():
-    return unittest.TestSuite([
-
-        # Unit tests for your API
-        doctestunit.DocFileSuite(
-            'README.txt', package='opencore.redirect',
-            setUp=testing.setUp, tearDown=testing.tearDown),
-
-        #doctestunit.DocTestSuite(
-        #    module='opencore.redirect.mymodule',
-        #    setUp=testing.setUp, tearDown=testing.tearDown),
-
-        # Integration tests that use ZopeTestCase
-        #ztc.ZopeDocFileSuite(
-        #    'README.txt', package='opencore.redirect',
-        #    setUp=testing.setUp, tearDown=testing.tearDown),
-
-        #ztc.FunctionalDocFileSuite(
-        #    'browser.txt', package='opencore.redirect'),
-        
-        ])
+    from zope.component import getUtility
+    from opencore.redirect import RedirectStore, IRedirectMapping
+    from opencore.redirect import SelectiveRedirectTraverser
+    
+    readme = ztc.FunctionalDocFileSuite('README.txt',
+                                      package='opencore.redirect',
+                                      optionflags=optionflags,
+                                      setUp=basic_setup,
+                                      globs=locals())
+    
+    spec = ztc.FunctionalDocFileSuite('spec.txt',
+                                      package='opencore.redirect',
+                                      optionflags=optionflags,
+                                      globs=locals())
+    
+    store = ztc.FunctionalDocFileSuite('redirect-store.txt',
+                                       package='opencore.redirect',
+                                       optionflags=optionflags,
+                                       globs=locals())
+    suites = (readme, spec, store)
+    for suite in suites:
+        suite.layer = ZCMLLayer
+    return unittest.TestSuite(suites)
 
 if __name__ == '__main__':
     unittest.main(defaultTest='test_suite')
