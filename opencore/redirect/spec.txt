@@ -9,20 +9,21 @@ Local Utility
 
 Double head BTree container for managing domain reroutes
 
-    >>> store = RedirectStore('store')
-    >>> path_slice = "/path/between/traverser/and/object-of-redirection"
-    >>> store[path_slice] = "http://www.newdomain.com" 
-    >>> '%s/sub/path' %store.get(path_slice) 
-    'http://www.newdomain.com/sub/path'
+    #>>> store = RedirectStore('store')
+    #>>> path_slice = "/path/between/traverser/and/object-of-redirection"
+    #>>> store[path_slice] = "http://www.newdomain.com" 
+    #>>> '%s/sub/path' %store.get(path_slice) 
+    #'http://www.newdomain.com/sub/path'
 
-    >>> del store[path_slice]
-    >>> store.get(path_slice) is None
+    #>>> del store[path_slice]
+    #>>> store.get(path_slice) is None
     True
+
 
 Annotation
 ==========
 
-Paths to be searched for possible redirects are stored as annotations
+Subproject Paths to be searched for possible redirects are stored as annotations
 on the local utility::
 
     >>> from opencore.redirect import get_search_paths
