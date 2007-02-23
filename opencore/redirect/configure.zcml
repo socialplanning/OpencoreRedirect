@@ -2,17 +2,27 @@
            xmlns:browser="http://namespaces.zope.org/browser"
 	   xmlns:five="http://namespaces.zope.org/five">
 
-  <includeOverrides file="localsite.zcml" />
+  <include package="zope.app.annotation" />
+  <five:implements 
+     class="OFS.SimpleItem.SimpleItem" 
+     interface="zope.app.annotation.interfaces.IAttributeAnnotatable"
+     />
+  <five:implements 
+     class="OFS.Folder.Folder" 
+     interface="zope.app.annotation.interfaces.IAttributeAnnotatable"
+     />
+  <!-- includeOverrides file="localsite.zcml" / -->
 
-  <browser:page
+  <!-- browser:page
      for="OFS.interfaces.IFolder"
      class=".site.RedirectStoreInstallView"
      permission="five.ManageSite"
      template="install.pt"
      name="opencore.redirector-install.html"
-     />
+     /-->
 
   <browser:page
+     for="opencore.redirect.interfaces.IRedirectInfo"
      class="opencore.redirect.Redirector"
      permission="zope.Public"
      attribute="redirect"
@@ -20,12 +30,9 @@
      />
 
   <adapter factory="opencore.redirect.SelectiveRedirectTraverser" />
-
-  <five:implements 
-     class="opencore.redirect.RedirectStore"
-     interface="zope.app.annotation.interfaces.IAttributeAnnotatable"
-     />
   
-  <interface interface="opencore.redirect.interfaces.IRedirectable" />
+  <interface interface="opencore.redirect.interfaces.IRedirected" />
+
+  <five:traversable class="OFS.Application.Application" />
 
 </configure>
