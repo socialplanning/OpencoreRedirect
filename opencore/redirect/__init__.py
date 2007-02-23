@@ -1,17 +1,16 @@
 from BTrees.OOBTree import OOBTree
 from Products.Five import BrowserView
 from Products.Five.traversable import FiveTraversable
-from interfaces import IRedirectMapping    
 from memojito import memoizedproperty
-from opencore.redirect.site import get_redirectstore
-from opencore.redirect.interfaces import IRedirectable
+from opencore.redirect.interfaces import IRedirected, IRedirectInfo
 from persistent.list import PersistentList
-from topp.viewtraverser.traverser import ViewTraverser, Traverser
-from zope.component import getMultiAdapter
-from zope.interface import implements
+from zope.component import getMultiAdapter, adapts
+from zope.interface import implements, alsoProvides
+from zope.app.traversing.adapters import Traverser, _marker
+from zope.app.traversing.interfaces import ITraverser
 
 try:
-    from zope.annotation.interfaces import IAnnotations
+    from zope.annotation.interfaces import IAnnotations, IAnnotatable
 except ImportError:
     from zope.app.annotation.interfaces import IAnnotations
 
@@ -19,47 +18,43 @@ import logging
 
 
 _marker = object()
-LOG=PATH_KEY = "opencore.redirect"
+LOG = KEY = "opencore.redirect"
 
 
-class RedirectStore(OOBTree):
-    implements(IRedirectMapping)
+class RedirectInfo(OOBTree):
+    implements(IRedirectInfo)
 
-    def __init__(self, id_):
-        super(RedirectStore, self).__init__()
-        self.id = id_
-
-
-def get_search_paths(store):
-    ann = IAnnotations(store)
-    paths = ann.get(PATH_KEY)
-    if not paths:
-        ann[PATH_KEY] = PersistentList()
-        paths = ann[PATH_KEY]
-    return paths
+    def __init__(self, url=None, parent=None):
+        super(RedirectInfo, self).__init__()
+        self.url = url
+        self.parent = parent
 
 
-class SelectiveRedirectTraverser(ViewTraverser):
+def get_annotation(obj, key, **kwargs):
+    ann = IAnnotations(obj)
+    notes = ann.get(key)
+    if not notes and kwargs:
+        factory = kwargs.pop('factory')
+        if not factory:
+            raise Exception("No annotation factory given")
+        ann[key] = factory(**kwargs)
+        notes = ann[key]
+    return notes
+
+
+class SelectiveRedirectTraverser(Traverser):
     """if a path matches a criterion, check agains mapping, and redirect if necessary"""
-    adapts(IRedirectable)
-
-    viewname = "opencore.redirector"
+    adapts(IRedirected)
+    implements(ITraverser)
 
     @memoizedproperty
-    def store(self):
-        return get_redirectstore()
-
-    @property    
-    def redirect_url(self):
-        return self.store.get(path, None)
+    def info(self):
+        return get_annotation(self.context, KEY)
     
     def traverse(self, path, default=_marker, request=None):
-        if self.redirect_url:
-            obj = ViewTraverser.traverse(self, path, default=_marker, request=request)
-            obj.redirect_url = self.redirect_url
-            obj.store = self.store
+        if self.info.url:
+            obj = getMultiAdapter((self.info, request), name=KEY)
             return obj
-        
         return Traverser.traverse(self, path, default=_marker, request=request)
 
 
@@ -72,10 +67,18 @@ class Redirector(BrowserView, FiveTraversable):
         self.context = context
         self.request = request
 
+    @property
+    def redirect_url(self):
+        return self.context.url
+
+    @property
+    def url(self):
+        return "%s/%s" %(self.redirect_url, '/'.join(self.subpath))
+        
     def redirect(self):
-        url = self.redirect_url, '/'.join(self.subpath)
-        self.request.RESPONSE.redirect("%s/%s" %url)
-        self.logger.info("Redirected to %s" %url)
+        self.request.RESPONSE.redirect(self.url)
+        self.logger.info("Redirected to %s" %self.url)
+        return self.request.RESPONSE
 
     def traverse( self, name, furtherPath ):
         # slurp path
@@ -86,3 +89,23 @@ class Redirector(BrowserView, FiveTraversable):
     @property
     def logger(self):
         return logging.getLogger(LOG)
+
+
+def apply_redirect(obj, url=None, parent=None, subprojects=None):
+    alsoProvides(obj, IRedirected)
+    info = get_annotation(obj, KEY, factory=RedirectInfo, url=url, parent=parent)
+    if subprojects:
+        for project_name, path in subprojects:
+            info[project_name] = path
+    return info
+
+def get_redirect_info(obj):
+    if IRedirected.providedBy(obj):
+        return get_annotation(obj, KEY)
+    raise TypeError('Object does not provide %s' %IRedirected)
+    
+def remove_subproject(obj, ids):
+    info= get_annotation(obj, KEY, factory=RedirectInfo, url=url, parent=parent)
+    for pid in ids:
+        if info.get(pid):
+            del info[pid]
