@@ -5,7 +5,7 @@
 opencore.redirect provides a basic convenience functions for
 managing redirectstore mappings::
 
-    >>> from opencore.redirect.site import add_redirectstore
+#    >>> from opencore.redirect.site import add_redirectstore
     >>> add_redirectstore(self.folder)
     >>> self.folder.utilities.objectIds()
     ['IRedirectMapping']
