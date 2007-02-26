@@ -1,6 +1,6 @@
 from BTrees.OOBTree import OOBTree
 from Products.Five import BrowserView
-from Products.Five.traversable import FiveTraversable
+from Products.Five.traversable import Traversable
 from memojito import memoizedproperty
 from opencore.redirect.interfaces import IRedirected, IRedirectInfo
 from persistent.list import PersistentList
@@ -46,26 +46,38 @@ class SelectiveRedirectTraverser(Traverser):
     """if a path matches a criterion, check agains mapping, and redirect if necessary"""
     adapts(IRedirected)
     implements(ITraverser)
+    debug = False
 
     @memoizedproperty
     def info(self):
         return get_annotation(self.context, KEY)
     
     def traverse(self, path, default=_marker, request=None):
+        if self.debug:
+            import pdb;pdb.set_trace()
+            
+        if request.get('SERVER_URL').find(self.info.url)>-1:
+            reroute = self.info.get(path[0], None)
+            import pdb;pdb.set_trace()
+
         if self.info.url:
             obj = getMultiAdapter((self.info, request), name=KEY)
+            obj.path_start = path.pop()
             return obj
         return Traverser.traverse(self, path, default=_marker, request=request)
 
 
-class Redirector(BrowserView, FiveTraversable):
-    redirect_url = None
-    store = None
-    subpath = []
+class Redirector(BrowserView, Traversable):
+    """there is only zpublisher"""
+    implements(ITraverser)
+    debug = False
     
     def __init__(self, context, request):
         self.context = context
         self.request = request
+        self.store = None
+        self.subpath = []
+        self.path_start = None
 
     @property
     def redirect_url(self):
@@ -73,17 +85,18 @@ class Redirector(BrowserView, FiveTraversable):
 
     @property
     def url(self):
-        return "%s/%s" %(self.redirect_url, '/'.join(self.subpath))
+        return "%s/%s/%s" %(self.redirect_url,
+                            self.path_start,
+                            '/'.join(self.subpath))
         
     def redirect(self):
         self.request.RESPONSE.redirect(self.url)
         self.logger.info("Redirected to %s" %self.url)
         return self.request.RESPONSE
 
-    def traverse( self, name, furtherPath ):
-        # slurp path
-        while furtherPath:
-            self.subpath.append( furtherPath.pop( 0 ) )
+    #@@ 2.10?:: def traverse( self, name, furtherPath ):
+    def traverse(self, path, default=_marker, request=None):
+        self.subpath.append(path[0])
         return self
     
     @property
@@ -99,10 +112,12 @@ def apply_redirect(obj, url=None, parent=None, subprojects=None):
             info[project_name] = path
     return info
 
+
 def get_redirect_info(obj):
     if IRedirected.providedBy(obj):
         return get_annotation(obj, KEY)
     raise TypeError('Object does not provide %s' %IRedirected)
+
     
 def remove_subproject(obj, ids):
     info= get_annotation(obj, KEY, factory=RedirectInfo, url=url, parent=parent)
