@@ -6,6 +6,10 @@ from opencore.redirect.interfaces import IRedirected, IRedirectInfo
 from persistent.list import PersistentList
 from zope.component import getMultiAdapter, adapts
 from zope.interface import implements, alsoProvides
+try:
+    from zope.interface import noLongerProvides
+except ImportError:
+    from Products.Five.utilities.marker import erase as noLongerProvides
 from zope.app.traversing.adapters import Traverser, _marker
 from zope.app.traversing.interfaces import ITraverser
 from five.intid.keyreference import get_root
@@ -128,6 +132,10 @@ def apply_redirect(obj, url=None, parent=None, subprojects=None):
             info[project_name] = path
     return info
 
+activate = apply_redirect
+
+def deactivate(obj):
+    noLongerProvides(obj, IRedirected)
 
 def get_redirect_info(obj):
     if IRedirected.providedBy(obj):

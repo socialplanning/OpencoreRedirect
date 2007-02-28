@@ -1,0 +1,39 @@
+========================
+ Using OpencoreRedirect
+========================
+
+Application of redirection
+==========================
+
+To instantiate redirect from a particular object::
+
+    >>> from opencore import redirect
+    >>> container = root_object_for_redirection
+    >>> redirect.activate(container,
+    ...                   url='http://url_to_redirect_to')
+
+To add an alias to objects not located within
+the acquisition path or are not members of the container::
+
+    >>> from opencore.redirect import get_redirect_info
+    >>> redirect_info = get_redirect_info(container)
+    >>> redirect_info['string_to_redirect_on'] = '/path/to/aliased_object'
+
+This means that the path::
+
+    "http://url_to_redirect_to/string_to_redirect_on"
+
+points to the object located at::
+
+    "/path/to/aliased_object"
+
+(in relation to the root of the zope instance)
+
+
+Removing redirection
+====================
+
+    >>> redirect.deactivate(container)
+
+
+
