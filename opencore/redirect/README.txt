@@ -104,10 +104,6 @@ Traversing past self.app now will redirect by returning the redirector::
     Content-Length: 0
     Location: http://redirected/monkey-time...
 
-    >>> klass = self.app.__bobo_traverse__(request, 'monkey-time').__class__
-    >>> klass.debug = True
-    >>> import opencore.redirect as mod
-    >>> mod.SelectiveRedirectTraverser.debug=True
 
     >>> print http(r'''
     ... GET /monkey-time/and/more HTTP/1.1
@@ -120,17 +116,95 @@ Traversing past self.app now will redirect by returning the redirector::
 Internal Subpath Redirection
 ============================
 
-The selective redirect traverser also allows for the return of certain
-subobject as if they were members of the current container. These
-redirects only occur if we are inside the correct url, so we will need
-to set our redirect url to match our current test url::
+Selective traversal does one more trick; it looks up and returns
+aliases stored in the annotation's btree. This only occurs if the
+traverser sees that the request is from the redirected url::
 
-    >>> import transaction as txn
-    >>> info = apply_redirect(self.app, url="http://localhost", parent=None)
+    >>> request._environ['SERVER_URL'] = 'http://redirected'
 
-Next, we'll want to set self.folder as our redirect target(the path
-segment is the key for now)::
+we'll need another folder to redirect into(basically we will hop over
+self.folder when we do this redirect and act as if our new
+folder is a root folder)::
 
-    >>> st(); info[self.folder.getId()] = '/'.join(self.folder.getPhysicalPath())
+    >>> subproject = add_folder(self.folder, 'my-subproject')
 
-    @@ add another folder so we get some actually redirect
+@@ test case hack to make sure index.html is available::
+
+    >>> alsoProvides(subproject, ITestObject)
+
+Then we need to inform our annotation of the redirection::
+
+    >>> info[subproject.getId()] = '/'.join(subproject.getPhysicalPath())
+
+This could be arbitrary as long as the key is unique::
+
+    >>> info['disney-land'] = '/'.join(subproject.getPhysicalPath())
+
+A traversal should return our subproject::
+
+    >>> self.app.__bobo_traverse__(request, 'my-subproject')
+    <Folder at /test_folder_1_/my-subproject>
+
+    >>> self.app.__bobo_traverse__(request, 'disney-land')
+    <Folder at /test_folder_1_/my-subproject>
+
+Let's go through the publisher in proper now::
+
+    >>> info.url="http://localhost"
+    >>> info['candy-mountain'] = '/'.join(subproject.getPhysicalPath())
+    >>> print http(r'''
+    ... GET /candy-mountain/index.html HTTP/1.1
+    ... ''')
+    HTTP/1.1 200 OK
+    Content-Length: 117
+    Content-Type: text/html; charset=iso-8859-15...
+    Actual   URL: http://localhost/candy-mountain/index.html
+    Physical URL: http://localhost/test_folder_1_/my-subproject...
+
+Traversal compliance
+====================
+
+We also need to make sure we can get traverse normally to existing
+objects within our container::
+
+    >>> alsoProvides(self.folder, ITestObject)
+    >>> print http(r'''
+    ... GET /test_folder_1_/index.html HTTP/1.1
+    ... ''')
+    HTTP/1.1 200 OK
+    Content-Length: 103
+    Content-Type: text/html; charset=iso-8859-15...
+    Actual   URL: http://localhost/test_folder_1_/index.html
+    Physical URL: http://localhost/test_folder_1_...
+
+And to the contents of non-subredirected content::
+
+    >>> print http(r'''
+    ... GET /test_folder_1_/my-subproject HTTP/1.1
+    ... ''')
+    HTTP/1.1 200 OK...
+    Actual   URL: http://localhost/test_folder_1_/my-subproject/index.html
+    Physical URL: http://localhost/test_folder_1_/my-subproject...
+
+
+We also want to be sure that traversal fails normally::
+
+    >>> print http(r'''
+    ... GET /nothinghere HTTP/1.1
+    ... ''')
+    HTTP/1.1 404 Not Found...
+
+    >>> print http(r'''
+    ... GET /candy-mountain/nothinghere HTTP/1.1
+    ... ''')
+    HTTP/1.1 404 Not Found...
+
+    >>> print http(r'''
+    ... GET /candy-mountain/nothinghere HTTP/1.1
+    ... ''')
+    HTTP/1.1 404 Not Found...
+
+
+Finally, when we remove the marker, we want traversal to return to normal::
+
+    

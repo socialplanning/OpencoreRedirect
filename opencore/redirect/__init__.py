@@ -8,6 +8,7 @@ from zope.component import getMultiAdapter, adapts
 from zope.interface import implements, alsoProvides
 from zope.app.traversing.adapters import Traverser, _marker
 from zope.app.traversing.interfaces import ITraverser
+from five.intid.keyreference import get_root
 
 try:
     from zope.annotation.interfaces import IAnnotations, IAnnotatable
@@ -41,30 +42,45 @@ def get_annotation(obj, key, **kwargs):
         notes = ann[key]
     return notes
 
+from cStringIO import StringIO
+
+out = StringIO()
 
 class SelectiveRedirectTraverser(Traverser):
     """if a path matches a criterion, check agains mapping, and redirect if necessary"""
     adapts(IRedirected)
     implements(ITraverser)
+
     debug = False
+    get_root = staticmethod(get_root)
+    _default_traverse=Traverser.traverse
 
     @memoizedproperty
     def info(self):
         return get_annotation(self.context, KEY)
-    
-    def traverse(self, path, default=_marker, request=None):
-        if self.debug:
-            import pdb;pdb.set_trace()
-            
-        if request.get('SERVER_URL').find(self.info.url)>-1:
-            reroute = self.info.get(path[0], None)
-            import pdb;pdb.set_trace()
 
-        if self.info.url:
+    def reroute(self, path, default=_marker):
+        reroute = self.info.get(path)
+        if reroute:
+            return self.get_root(self.context).restrictedTraverse(reroute)
+        return default
+
+    def traverse(self, path, default=_marker, request=None):
+        server_url = request.get('SERVER_URL')
+
+        # check for external redirect
+        if self.info.url and not server_url.find(self.info.url)>-1:
             obj = getMultiAdapter((self.info, request), name=KEY)
             obj.path_start = path.pop()
             return obj
-        return Traverser.traverse(self, path, default=_marker, request=request)
+
+        # check for internal redirect
+        obj = self.reroute(path[0])
+        if obj is not _marker:
+            return obj
+
+        # traverse normally
+        return self._default_traverse(path, default=_marker, request=request)
 
 
 class Redirector(BrowserView, Traversable):

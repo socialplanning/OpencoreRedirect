@@ -34,5 +34,6 @@
   <interface interface="opencore.redirect.interfaces.IRedirected" />
 
   <five:traversable class="OFS.Application.Application" />
+  <five:traversable class="OFS.Folder.Folder" />
 
 </configure>

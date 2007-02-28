@@ -7,25 +7,34 @@ from zope.testing import doctestunit
 from zope.testing import doctest
 from zope.component import testing
 from Testing import ZopeTestCase as ztc
+from Products.Five import zcml
 
 import warnings; warnings.filterwarnings("ignore")
 
 optionflags = doctest.REPORT_ONLY_FIRST_FAILURE | doctest.ELLIPSIS
 
 ## from opencore.redirect.site import add_redirectstore
-def add_request(tc):
+def readme_setup(tc):
     tc.new_request = utils.new_request()
+    import opencore.redirect
+    zcml.load_config('test.zcml', opencore.redirect)
 
 def test_suite():
     from zope.component import getMultiAdapter
     from opencore.redirect import RedirectInfo, IRedirectInfo, IRedirected
     from opencore.redirect import SelectiveRedirectTraverser, ITraverser, get_redirect_info
     from zope.interface import alsoProvides
+    from opencore.redirect.interfaces import ITestObject 
+
+    def add_folder(container, folder_id):
+        from OFS.Folder import manage_addFolder
+        manage_addFolder(container, folder_id)
+        return getattr(container, folder_id)
     
     readme = ztc.FunctionalDocFileSuite('README.txt',
                                         package='opencore.redirect',
                                         optionflags=optionflags,
-                                        setUp=add_request,
+                                        setUp=readme_setup,
                                         globs=locals())
     
     spec = ztc.FunctionalDocFileSuite('spec.txt',
