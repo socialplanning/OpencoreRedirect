@@ -25,9 +25,10 @@ setup(name='OpenCoreRedirect',
       include_package_data=True,
       zip_safe=False,
       install_requires=[
-          # -*- Extra requirements: -*-
+          "five.intid==dev"
       ],
       entry_points="""
       # -*- Entry points: -*-
       """,
+      dependency_links=["https://svn.plone.org/svn/collective/five.intid/trunk#egg=five.intid-dev"]
       )
