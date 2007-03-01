@@ -4,6 +4,7 @@ from Products.Five.traversable import Traversable
 from memojito import memoizedproperty
 from opencore.redirect.interfaces import IRedirected, IRedirectInfo
 from persistent.list import PersistentList
+from persistent import Persistent
 from zope.component import getMultiAdapter, adapts
 from zope.interface import implements, alsoProvides
 try:
@@ -26,7 +27,7 @@ _marker = object()
 LOG = KEY = "opencore.redirect"
 
 
-class RedirectInfo(OOBTree):
+class RedirectInfo(OOBTree, Persistent):
     implements(IRedirectInfo)
 
     def __init__(self, url=None, parent=None):
