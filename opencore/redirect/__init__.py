@@ -128,6 +128,10 @@ class Redirector(BrowserView, Traversable):
 def apply_redirect(obj, url=None, parent=None, subprojects=None):
     alsoProvides(obj, IRedirected)
     info = get_annotation(obj, KEY, factory=RedirectInfo, url=url, parent=parent)
+    if info.url is not url:
+        info.url = url
+    if info.parent is not parent:
+        info.parent = parent
     if subprojects:
         for project_name, path in subprojects:
             info[project_name] = path
