@@ -25,7 +25,7 @@ setup(name='OpenCoreRedirect',
       include_package_data=True,
       zip_safe=False,
       install_requires=[
-          "five.intid==dev"
+          "five.intid==dev,>0.1"
       ],
       entry_points="""
       # -*- Entry points: -*-
