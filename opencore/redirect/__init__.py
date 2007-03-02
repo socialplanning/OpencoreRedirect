@@ -3,7 +3,7 @@ from Products.Five import BrowserView
 from Products.Five.traversable import Traversable
 from memojito import memoizedproperty
 from opencore.redirect.interfaces import IRedirected, IRedirectInfo
-from persistent.list import PersistentList
+from persistent.mapping import PersistentMapping
 from persistent import Persistent
 from zope.component import getMultiAdapter, adapts
 from zope.interface import implements, alsoProvides
@@ -27,14 +27,18 @@ _marker = object()
 LOG = KEY = "opencore.redirect"
 
 
-class RedirectInfo(Persistent, OOBTree):
+class RedirectInfo(PersistentMapping):
     implements(IRedirectInfo)
-
     def __init__(self, url=None, parent=None):
         super(RedirectInfo, self).__init__()
         self.url = url
         self.parent = parent
-
+        self._p_changed=1
+        
+    def __repr__(self):
+        return "%s -> '%s' => %s" %(Persistent.__repr__(self),
+                                    self.url,
+                                    super(RedirectInfo, self).__repr__())
 
 def get_annotation(obj, key, **kwargs):
     ann = IAnnotations(obj)
@@ -47,9 +51,6 @@ def get_annotation(obj, key, **kwargs):
         notes = ann[key]
     return notes
 
-from cStringIO import StringIO
-
-out = StringIO()
 
 class SelectiveRedirectTraverser(Traverser):
     """if a path matches a criterion, check agains mapping, and redirect if necessary"""
@@ -60,9 +61,15 @@ class SelectiveRedirectTraverser(Traverser):
     get_root = staticmethod(get_root)
     _default_traverse=Traverser.traverse
 
+    @property
+    def logger(self):
+        return logging.getLogger(LOG)
+
     @memoizedproperty
     def info(self):
-        return get_annotation(self.context, KEY)
+        info = get_annotation(self.context, KEY)
+        self.logger.info("url", info.url)
+        return info
 
     def reroute(self, path, default=_marker):
         reroute = self.info.get(path)
@@ -135,6 +142,7 @@ def apply_redirect(obj, url=None, parent=None, subprojects=None):
     if subprojects:
         for project_name, path in subprojects:
             info[project_name] = path
+    info._p_changed=1
     return info
 
 activate = apply_redirect
@@ -146,6 +154,8 @@ def get_redirect_info(obj):
     if IRedirected.providedBy(obj):
         return get_annotation(obj, KEY)
     raise TypeError('Object does not provide %s' %IRedirected)
+
+get_info = get_redirect_info
 
     
 def remove_subproject(obj, ids):
