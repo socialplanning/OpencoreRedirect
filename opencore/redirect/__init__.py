@@ -82,7 +82,7 @@ class SelectiveRedirectTraverser(Traverser):
         
         # check for external redirect
         if self.info.url and not server_url.find(self.info.url)>-1:
-            obj = getMultiAdapter((self.info, request), name=KEY)
+            obj = getMultiAdapter((self.context, request), name=KEY)
             obj.redirect_url = self.info.url
             seg = path[0]
             if seg in request['PATH_INFO']:
