@@ -18,7 +18,7 @@ We have function that setups a redirection::
 
     >>> from opencore.redirect import apply_redirect
     >>> apply_redirect(self.app, url="http://redirected", parent=None)
-    <opencore.redirect.RedirectInfo object at ...>
+    <opencore.redirect.RedirectInfo object at ...> -> 'http://redirected' => {}
     
 We have a traversal adapter to ITraverser
 
@@ -34,6 +34,7 @@ consumes the rest of the subpath.
     >>> getMultiAdapter((info, request), name='opencore.redirect')
     <Products.Five.metaclass.Redirector object at ...>
 
+
 The annotation
 ==============
 
@@ -47,7 +48,6 @@ Parent is unset and for meant for use with a subpath object::
 
     >>> info.parent
     
-
 We can add the default folder as a subpath like so::
 
     >>> info['sub-project'] = '/'.join(self.folder.getPhysicalPath())
@@ -55,6 +55,10 @@ We can add the default folder as a subpath like so::
 We use the physical path because later, we'll use this path to
 retrieve the subpath object.
 
+Note the change in representation for the info object::
+
+    >>> print info
+    <...> -> 'http://redirected' => {'sub-project': '/test_folder_1_'}
 
 The view
 ========
@@ -139,6 +143,7 @@ Then we need to inform our annotation of the redirection::
 This could be arbitrary as long as the key is unique::
 
     >>> info['disney-land'] = '/'.join(subproject.getPhysicalPath())
+
 
 A traversal should return our subproject::
 
