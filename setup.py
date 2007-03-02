@@ -1,9 +1,9 @@
 from setuptools import setup, find_packages
 import sys, os
 
-version = '0.1'
+version = '0.2'
 
-setup(name='OpenCoreRedirect',
+setup(name='OpencoreRedirect',
       version=version,
       description="",
       long_description="""\
