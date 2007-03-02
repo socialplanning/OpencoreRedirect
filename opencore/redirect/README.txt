@@ -31,7 +31,7 @@ consumes the rest of the subpath.
 
     >>> request = self.new_request
     >>> info = get_redirect_info(self.app)
-    >>> getMultiAdapter((info, request), name='opencore.redirect')
+    >>> getMultiAdapter((self.app, request), name='opencore.redirect')
     <Products.Five.metaclass.Redirector object at ...>
 
 
@@ -70,7 +70,7 @@ publishing).  When the end of traversal is reached, the redirect
 method is called(we'll test the property used to seed the redirect
 here)::
 
-    >>> redirector = getMultiAdapter((info, request), name='opencore.redirect')
+    >>> redirector = getMultiAdapter((self.app, request), name='opencore.redirect')
     >>> redirector.path_start = 'sub-project'
     >>> redirector.traverse(['further'], request=request)
     <Products.Five.metaclass.Redirector object at ...>
@@ -78,7 +78,10 @@ here)::
     >>> redirector.traverse(['path'], request=request)
     <Products.Five.metaclass.Redirector object at ...>
 
-    >>> redirector.url
+We will simulate the effect of the traverser and add the redirect info::
+ 
+    >>> redirector.redirect_url=info.url
+    >>> redirector.redirect_url
     'http://redirected/sub-project/further/path'
 
 This sets us up to do the redirect which will occur when the publisher
@@ -98,7 +101,9 @@ The Traverser
 
 Traversing past self.app now will redirect by returning the redirector::
 
-    >>> self.app.__bobo_traverse__(request, 'monkey-time')
+#    >>> set_path('', 'monkey-time')
+
+#    >>> self.app.__bobo_traverse__(request, 'monkey-time')
     <Products.Five.metaclass.Redirector object at ...>
 
     >>> print http(r'''

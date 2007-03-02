@@ -13,11 +13,26 @@ import warnings; warnings.filterwarnings("ignore")
 
 optionflags = doctest.REPORT_ONLY_FIRST_FAILURE | doctest.ELLIPSIS
 
+def returno(obj, attr):
+    def wrap(*args, **kwargs):
+        return getattr(obj, attr, None)
+    return wrap
+
+class Bag(object):
+    def __init__(self, **kw):
+        for key, val in kw.items():
+            setattr(self, key, val)
+
+_ppfu = Bag(path=['', 'sub-project', 'further', 'path'])
+_url = Bag(url='http://localhost')
+
 ## from opencore.redirect.site import add_redirectstore
 def readme_setup(tc):
     tc.new_request = utils.new_request()
     import opencore.redirect
     zcml.load_config('test.zcml', opencore.redirect)
+    tc.new_request.physicalPathFromURL=returno(_ppfu, 'path')
+    tc.new_request.getURL=returno(_url, 'url')
 
 def test_suite():
     from zope.component import getMultiAdapter
@@ -25,6 +40,11 @@ def test_suite():
     from opencore.redirect import SelectiveRedirectTraverser, ITraverser, get_redirect_info
     from zope.interface import alsoProvides
     from opencore.redirect.interfaces import ITestObject 
+    global _url
+    global _ppfu
+
+    def set_path(*path):
+        _ppfu.path = path
 
     def add_folder(container, folder_id):
         from OFS.Folder import manage_addFolder

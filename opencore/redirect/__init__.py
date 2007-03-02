@@ -14,6 +14,7 @@ except ImportError:
 from zope.app.traversing.adapters import Traverser, _marker
 from zope.app.traversing.interfaces import ITraverser
 from five.intid.keyreference import get_root
+from opencore.redirect.classproperty import property as kproperty
 
 try:
     from zope.annotation.interfaces import IAnnotations, IAnnotatable
@@ -68,7 +69,6 @@ class SelectiveRedirectTraverser(Traverser):
     @memoizedproperty
     def info(self):
         info = get_annotation(self.context, KEY)
-        self.logger.info("url", info.url)
         return info
 
     def reroute(self, path, default=_marker):
@@ -79,11 +79,14 @@ class SelectiveRedirectTraverser(Traverser):
 
     def traverse(self, path, default=_marker, request=None):
         server_url = request.get('SERVER_URL')
-
+        
         # check for external redirect
         if self.info.url and not server_url.find(self.info.url)>-1:
             obj = getMultiAdapter((self.info, request), name=KEY)
-            obj.path_start = path.pop()
+            obj.redirect_url = self.info.url
+            seg = path[0]
+            if seg in request['PATH_INFO']:
+                obj.path_start = seg
             return obj
 
         # check for internal redirect
@@ -107,24 +110,43 @@ class Redirector(BrowserView, Traversable):
         self.subpath = []
         self.path_start = None
 
-    @property
-    def redirect_url(self):
-        return self.context.url
+    def __of__(self, obj):
+        if obj is self:
+            return self
+        return super(Redirector, self).__of__(obj)
 
     @property
-    def url(self):
-        return "%s/%s/%s" %(self.redirect_url,
-                            self.path_start,
-                            '/'.join(self.subpath))
+    def context_path(self):
+        return list(self.context.getPhysicalPath())
+
+    @property
+    def url_path(self):
+        return self.request.physicalPathFromURL(self.request.getURL())
+
+    @property
+    def further_path(self):
+        less = len(self.context_path)
+        return self.url_path[less:]
+
+    class redirect_url(kproperty):
+        def fget(self):
+            return "%s/%s" %(self._url, '/'.join(self.further_path))
+        def fset(self, value):
+            self._url = value
         
     def redirect(self):
-        self.request.RESPONSE.redirect(self.url)
-        self.logger.info("Redirected to %s" %self.url)
+        if getattr(self.request, "__redirected__", False):
+            return
+
+        self.request.RESPONSE.redirect(self.redirect_url)
+        self.logger.info("Redirected to %s" %self.redirect_url)
+            
+        self.request.__redirected__=True 
         return self.request.RESPONSE
 
     #@@ 2.10?:: def traverse( self, name, furtherPath ):
     def traverse(self, path, default=_marker, request=None):
-        self.subpath.append(path[0])
+        self.subpath.append(path[0]) # necessary?
         return self
     
     @property
