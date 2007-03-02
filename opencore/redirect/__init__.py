@@ -27,7 +27,7 @@ _marker = object()
 LOG = KEY = "opencore.redirect"
 
 
-class RedirectInfo(OOBTree, Persistent):
+class RedirectInfo(Persistent, OOBTree):
     implements(IRedirectInfo)
 
     def __init__(self, url=None, parent=None):
