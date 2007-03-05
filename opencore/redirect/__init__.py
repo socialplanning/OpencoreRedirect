@@ -126,7 +126,11 @@ class Redirector(BrowserView, Traversable):
     @property
     def further_path(self):
         less = len(self.context_path)
-        return self.url_path[less:]
+        fp = self.url_path[less:]
+        if self.request._hacked_path and len(fp) > 0 and fp[-1] == 'redirect': 
+            return fp[0:-1]
+        else:
+            return fp
 
     class redirect_url(kproperty):
         def fget(self):
