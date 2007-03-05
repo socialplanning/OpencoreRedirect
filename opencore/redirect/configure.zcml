@@ -29,6 +29,17 @@
      name="opencore.redirect"
      />
 
+
+
+     
+  <browser:page
+       for="Products.OpenPlans.interfaces.IProject"
+       class=".hackyform.RedirectSetupForm"
+       permission="five.ManageSite"
+       name="opencore_redirect_config"
+  />
+
+
   <adapter factory="opencore.redirect.SelectiveRedirectTraverser" />
   
   <interface interface="opencore.redirect.interfaces.IRedirected" />

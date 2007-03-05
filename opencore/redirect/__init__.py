@@ -26,7 +26,7 @@ import logging
 
 _marker = object()
 LOG = KEY = "opencore.redirect"
-
+RESERVED_PREFIX = "opencore_redirect"
 
 class RedirectInfo(PersistentMapping):
     implements(IRedirectInfo)
@@ -81,7 +81,9 @@ class SelectiveRedirectTraverser(Traverser):
         server_url = request.get('SERVER_URL')
         
         # check for external redirect
-        if self.info.url and not server_url.find(self.info.url)>-1:
+        if (self.info.url and not server_url.find(self.info.url)>-1
+            and not path[0].startswith(RESERVED_PREFIX) and 
+            not RESERVED_PREFIX in request.getURL()):
             obj = getMultiAdapter((self.context, request), name=KEY)
             obj.redirect_url = self.info.url
             seg = path[0]
