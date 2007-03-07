@@ -29,7 +29,7 @@
      name="opencore.redirect"
      />
 
-  <include package="Products.OpenPlans.browser">
+  <include package="Products.OpenPlans.browser" />
   <browser:page 
      name="projects"
      for="opencore.redirect.interfaces.IRedirected"
@@ -37,15 +37,12 @@
      permission="zope2.View"
      template="project_listing.pt" 
      />
-   </configure> 
-     
-
      
   <browser:page
        for="Products.OpenPlans.interfaces.IProject"
        class=".hackyform.RedirectSetupForm"
        permission="five.ManageSite"
-       name="opencore_redirect_config"
+        name="opencore_redirect_config"
   />
 
 
