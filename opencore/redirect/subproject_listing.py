@@ -1,4 +1,7 @@
-from Products.OpenPlans.browser.projectlisting import ProjectListingView 
+try:
+    from Products.OpenPlans.browser.projectlisting import ProjectListingView
+except ImportError:
+    from opencore.siteui.projectlisting import ProjectListingView
 from memojito import memoizedproperty
 
 from opencore.redirect import get_redirect_info
