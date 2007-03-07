@@ -11,15 +11,6 @@
      class="OFS.Folder.Folder" 
      interface="zope.app.annotation.interfaces.IAttributeAnnotatable"
      />
-  <!-- includeOverrides file="localsite.zcml" / -->
-
-  <!-- browser:page
-     for="OFS.interfaces.IFolder"
-     class=".site.RedirectStoreInstallView"
-     permission="five.ManageSite"
-     template="install.pt"
-     name="opencore.redirector-install.html"
-     /-->
 
   <browser:page
      for="opencore.redirect.interfaces.IRedirected"
@@ -29,7 +20,8 @@
      name="opencore.redirect"
      />
 
-  <include package="Products.OpenPlans.browser" />
+  <include package="opencore.siteui" />
+
   <browser:page 
      name="projects"
      for="opencore.redirect.interfaces.IRedirected"
@@ -37,13 +29,12 @@
      permission="zope2.View"
      template="project_listing.pt" 
      />
-     
+  
   <browser:page
-       for="Products.OpenPlans.interfaces.IProject"
-       class=".hackyform.RedirectSetupForm"
-       permission="five.ManageSite"
-        name="opencore_redirect_config"
-  />
+     for="Products.OpenPlans.interfaces.IProject"
+     class=".hackyform.RedirectSetupForm"
+     permission="five.ManageSite"
+     name="opencore_redirect_config" />
 
 
   <adapter factory="opencore.redirect.SelectiveRedirectTraverser" />
