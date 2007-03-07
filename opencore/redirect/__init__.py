@@ -1,27 +1,28 @@
 from BTrees.OOBTree import OOBTree
 from Products.Five import BrowserView
 from Products.Five.traversable import Traversable
+from five.intid.keyreference import get_root
 from memojito import memoizedproperty
+from opencore.redirect.classproperty import property as kproperty
 from opencore.redirect.interfaces import IRedirected, IRedirectInfo
-from persistent.mapping import PersistentMapping
 from persistent import Persistent
-from zope.component import getMultiAdapter, adapts
-from zope.interface import implements, alsoProvides
-try:
-    from zope.interface import noLongerProvides
-except ImportError:
-    from Products.Five.utilities.marker import erase as noLongerProvides
+from persistent.mapping import PersistentMapping
 from zope.app.traversing.adapters import Traverser, _marker
 from zope.app.traversing.interfaces import ITraverser
-from five.intid.keyreference import get_root
-from opencore.redirect.classproperty import property as kproperty
+from zope.component import getMultiAdapter, adapts
+from zope.interface import implements, alsoProvides
+import logging
 
 try:
     from zope.annotation.interfaces import IAnnotations, IAnnotatable
 except ImportError:
     from zope.app.annotation.interfaces import IAnnotations
 
-import logging
+try:
+    from zope.interface import noLongerProvides
+except ImportError:
+    from Products.Five.utilities.marker import erase as noLongerProvides
+
 
 
 _marker = object()
@@ -40,17 +41,6 @@ class RedirectInfo(PersistentMapping):
         return "%s -> '%s' => %s" %(Persistent.__repr__(self),
                                     self.url,
                                     super(RedirectInfo, self).__repr__())
-
-def get_annotation(obj, key, **kwargs):
-    ann = IAnnotations(obj)
-    notes = ann.get(key)
-    if not notes and kwargs:
-        factory = kwargs.pop('factory')
-        if not factory:
-            raise Exception("No annotation factory given")
-        ann[key] = factory(**kwargs)
-        notes = ann[key]
-    return notes
 
 
 class SelectiveRedirectTraverser(Traverser):
@@ -175,8 +165,10 @@ def apply_redirect(obj, url=None, parent=None, subprojects=None):
 
 activate = apply_redirect
 
+
 def deactivate(obj):
     noLongerProvides(obj, IRedirected)
+
 
 def get_redirect_info(obj):
     if IRedirected.providedBy(obj):
@@ -191,3 +183,15 @@ def remove_subproject(obj, ids):
     for pid in ids:
         if info.get(pid):
             del info[pid]
+
+
+def get_annotation(obj, key, **kwargs):
+    ann = IAnnotations(obj)
+    notes = ann.get(key)
+    if not notes and kwargs:
+        factory = kwargs.pop('factory')
+        if not factory:
+            raise Exception("No annotation factory given")
+        ann[key] = factory(**kwargs)
+        notes = ann[key]
+    return notes
