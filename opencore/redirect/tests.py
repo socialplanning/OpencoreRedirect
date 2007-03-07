@@ -33,6 +33,7 @@ def readme_setup(tc):
     zcml.load_config('test.zcml', opencore.redirect)
     tc.new_request.physicalPathFromURL=returno(_ppfu, 'path')
     tc.new_request.getURL=returno(_url, 'url')
+    tc.new_request._hacked_path=None
 
 def test_suite():
     from zope.component import getMultiAdapter
