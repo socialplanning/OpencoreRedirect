@@ -23,11 +23,10 @@ try:
 except ImportError:
     from Products.Five.utilities.marker import erase as noLongerProvides
 
-
-
 _marker = object()
 LOG = KEY = "opencore.redirect"
 RESERVED_PREFIX = "opencore_redirect"
+
 
 class RedirectInfo(PersistentMapping):
     implements(IRedirectInfo)
