@@ -22,16 +22,6 @@ class SubProjectListingView(ProjectListingView):
     def portal_catalog(self):
         return getToolByName(self, 'portal_catalog')
         
-    @memoizedproperty
     def allprojects(self): 
-        return self.portal_catalog(path=self.project_paths, sort_on='sortable_title')
-
-##     @property
-##     def alpha(self): 
-##         """ 
-##         this is just to eh assert that this view is 
-##         being called, just delete this at some point. 
-##         """ 
-##         for letter in "balloon": 
-##             yield letter 
+        return self.catalog(path=self.project_paths, sort_on='sortable_title')
 

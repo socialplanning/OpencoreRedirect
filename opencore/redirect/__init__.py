@@ -1,32 +1,35 @@
 from BTrees.OOBTree import OOBTree
 from Products.Five import BrowserView
 from Products.Five.traversable import Traversable
-from five.intid.keyreference import get_root
 from memojito import memoizedproperty
-from opencore.redirect.classproperty import property as kproperty
 from opencore.redirect.interfaces import IRedirected, IRedirectInfo
-from persistent import Persistent
 from persistent.mapping import PersistentMapping
-from zope.app.traversing.adapters import Traverser, _marker
-from zope.app.traversing.interfaces import ITraverser
+from persistent import Persistent
 from zope.component import getMultiAdapter, adapts
 from zope.interface import implements, alsoProvides
-import logging
+
+from Products.OpenPlans.interfaces import IProject 
+
+try:
+    from zope.interface import noLongerProvides
+except ImportError:
+    from Products.Five.utilities.marker import erase as noLongerProvides
+from zope.app.traversing.adapters import Traverser, _marker
+from zope.app.traversing.interfaces import ITraverser
+from five.intid.keyreference import get_root
+from opencore.redirect.classproperty import property as kproperty
 
 try:
     from zope.annotation.interfaces import IAnnotations, IAnnotatable
 except ImportError:
     from zope.app.annotation.interfaces import IAnnotations
 
-try:
-    from zope.interface import noLongerProvides
-except ImportError:
-    from Products.Five.utilities.marker import erase as noLongerProvides
+import logging
+
 
 _marker = object()
 LOG = KEY = "opencore.redirect"
 RESERVED_PREFIX = "opencore_redirect"
-
 
 class RedirectInfo(PersistentMapping):
     implements(IRedirectInfo)
@@ -40,6 +43,17 @@ class RedirectInfo(PersistentMapping):
         return "%s -> '%s' => %s" %(Persistent.__repr__(self),
                                     self.url,
                                     super(RedirectInfo, self).__repr__())
+
+def get_annotation(obj, key, **kwargs):
+    ann = IAnnotations(obj)
+    notes = ann.get(key)
+    if not notes and kwargs:
+        factory = kwargs.pop('factory')
+        if not factory:
+            raise Exception("No annotation factory given")
+        ann[key] = factory(**kwargs)
+        notes = ann[key]
+    return notes
 
 
 class SelectiveRedirectTraverser(Traverser):
@@ -88,6 +102,46 @@ class SelectiveRedirectTraverser(Traverser):
         # traverse normally
         return self._default_traverse(path, default=_marker, request=request)
 
+class DefaultingRedirectTraverser(Traverser): 
+    """
+    this object redirects to a default url for 
+    any IProject which has not had an explicit 
+    redirection url set. 
+    """
+
+    adapts(IProject)
+    implements(ITraverser)
+
+    @memoizedproperty 
+    def default_host(self): 
+        # XXX this is a hack ! 
+        return "http://localhost:8080"
+
+    def default_url_for(self, object, request): 
+        # XXX this is a hack ! 
+        return "http://localhost:8080/normal_redirect"
+
+    _default_traverse=Traverser.traverse
+
+    def traverse(self, path, default=_marker, request=None): 
+        server_url = request.get('SERVER_URL')
+
+        if not server_url.startswith(self.default_host): 
+            self.logger.info("Defaulting Redirector: redirecting request for %s (not under %s)" % (server_url, self.default_host))
+            redirector = getMultiAdapter((self.context, request), name=KEY)
+            redirector.redirect_url = self.default_url_for(self.context, request)
+            seg = path[0]
+            if seg in request['PATH_INFO']: 
+                redirector.path_start = seg 
+            return redirector 
+        else: 
+            self.logger.info("Defaulting Redirector: skipping request for %s (under %s)" % (server_url, self.default_host))
+            return self._default_traverse(path, default=_marker, request=request)
+
+    @property
+    def logger(self):
+        return logging.getLogger(LOG)
+        
 
 class Redirector(BrowserView, Traversable):
     """there is only zpublisher"""
@@ -164,10 +218,8 @@ def apply_redirect(obj, url=None, parent=None, subprojects=None):
 
 activate = apply_redirect
 
-
 def deactivate(obj):
     noLongerProvides(obj, IRedirected)
-
 
 def get_redirect_info(obj):
     if IRedirected.providedBy(obj):
@@ -182,15 +234,3 @@ def remove_subproject(obj, ids):
     for pid in ids:
         if info.get(pid):
             del info[pid]
-
-
-def get_annotation(obj, key, **kwargs):
-    ann = IAnnotations(obj)
-    notes = ann.get(key)
-    if not notes and kwargs:
-        factory = kwargs.pop('factory')
-        if not factory:
-            raise Exception("No annotation factory given")
-        ann[key] = factory(**kwargs)
-        notes = ann[key]
-    return notes

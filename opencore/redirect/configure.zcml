@@ -29,6 +29,14 @@
      permission="zope2.View"
      template="project_listing.pt" 
      />
+
+  <browser:page
+     for="Products.OpenPlans.interfaces.IProject"
+     class="opencore.redirect.Redirector"
+     permission="zope.Public"
+     attribute="redirect"
+     name="opencore.redirect"
+     />
   
   <browser:page
      for="Products.OpenPlans.interfaces.IProject"
@@ -38,6 +46,7 @@
 
 
   <adapter factory="opencore.redirect.SelectiveRedirectTraverser" />
+  <adapter factory="opencore.redirect.DefaultingRedirectTraverser" />
   
   <interface interface="opencore.redirect.interfaces.IRedirected" />
 
