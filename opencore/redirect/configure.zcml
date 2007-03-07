@@ -29,7 +29,16 @@
      name="opencore.redirect"
      />
 
-
+  <configure package="Products.OpenPlans.browser">
+  <browser:page 
+     name="projects"
+     for="opencore.redirect.interfaces.IRedirected"
+     class="opencore.redirect.subproject_listing.SubProjectListingView"
+     permission="zope2.View"
+     template="project_listing.pt" 
+     />
+   </configure> 
+     
 
      
   <browser:page
