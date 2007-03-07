@@ -20,8 +20,8 @@ class SubProjectListingView(ProjectListingView):
 
     @memoizedproperty
     def portal_catalog(self):
-        return getToolByName(self, 'portal_catalog')
+        return getToolByName(self.context, 'portal_catalog')
         
     def allprojects(self): 
-        return self.catalog(path=self.project_paths, sort_on='sortable_title')
+        return self.portal_catalog(path=self.project_paths, sort_on='sortable_title')
 
