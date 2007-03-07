@@ -29,7 +29,7 @@
      name="opencore.redirect"
      />
 
-  <configure package="Products.OpenPlans.browser">
+  <include package="Products.OpenPlans.browser">
   <browser:page 
      name="projects"
      for="opencore.redirect.interfaces.IRedirected"
