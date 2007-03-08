@@ -2,12 +2,13 @@ import os, sys, unittest
 from zope.testing import doctest
 from collective.testing.layer import ZCMLLayer
 from collective.testing import utils
-
 from zope.testing import doctestunit
 from zope.testing import doctest
 from zope.component import testing
 from Testing import ZopeTestCase as ztc
 from Products.Five import zcml
+from zope.interface import alsoProvides
+
 
 import warnings; warnings.filterwarnings("ignore")
 
@@ -30,20 +31,23 @@ _url = Bag(url='http://localhost')
 def readme_setup(tc):
     tc.new_request = utils.new_request()
     import opencore.redirect
+    from zope.app.annotation.interfaces import IAttributeAnnotatable
     zcml.load_config('test.zcml', opencore.redirect)
     tc.new_request.physicalPathFromURL=returno(_ppfu, 'path')
     tc.new_request.getURL=returno(_url, 'url')
     tc.new_request._hacked_path=None
+    alsoProvides(tc.app, IAttributeAnnotatable)
 
 def test_suite():
     from zope.component import getMultiAdapter
     from opencore.redirect import RedirectInfo, IRedirectInfo, IRedirected
     from opencore.redirect import SelectiveRedirectTraverser, ITraverser, get_redirect_info
+    from opencore.redirect.interfaces import ITestObject
     from zope.interface import alsoProvides
-    from opencore.redirect.interfaces import ITestObject 
     global _url
     global _ppfu
 
+    
     def set_path(*path):
         _ppfu.path = path
 
