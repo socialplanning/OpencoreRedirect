@@ -5,7 +5,7 @@ from memojito import memoizedproperty
 from opencore.redirect.interfaces import IRedirected, IRedirectInfo
 from persistent.mapping import PersistentMapping
 from persistent import Persistent
-from zope.component import getMultiAdapter, adapts
+from zope.component import getMultiAdapter, adapts, adapter
 from zope.interface import implements, alsoProvides
 
 from Products.OpenPlans.interfaces import IProject 
@@ -261,3 +261,37 @@ def remove_subproject(obj, ids):
     for pid in ids:
         if info.get(pid):
             del info[pid]
+
+
+
+def get_annotation(obj, key, **kwargs):
+    ann = IAnnotations(obj)
+    notes = ann.get(key)
+    if not notes and kwargs:
+        factory = kwargs.pop('factory')
+        if not factory:
+            raise Exception("No annotation factory given")
+        ann[key] = factory(**kwargs)
+        notes = ann[key]
+    return notes
+
+
+def pathstr(zope_obj):
+    path = zope_obj.getPhysicalPath()
+    return '/'.join(path)
+
+
+from opencore.interfaces import IProject
+
+@adapter(IProject, IRedirected)
+def handle_parent_child_association(parent, child):
+    child_id = child.getId()
+    parent_info = get_info(parent)
+    parent_path = redirect.pathstr(child)
+    parent_info[child_id] = parent_path
+    child_url = "%s/%s" %(parent_info.url, child_id) 
+    redirect.activate(child, url=child_url, parent=parent_path)
+
+
+def handle_child_created(child, parent):
+    handle((child, parent))

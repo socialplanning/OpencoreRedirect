@@ -1,5 +1,5 @@
 from zope.interface.common.mapping import IReadMapping, IWriteMapping
-from zope.interface import Interface, Attribute
+from zope.interface import Interface, Attribute, implements
 
 try:
     from zope.annotation.interfaces import IAnnotatable
@@ -20,3 +20,6 @@ class IRedirectInfo(IReadMapping, IWriteMapping):
 class ITestObject(Interface):
     # @@ remove when problem gets fixed
     """because for some reason, no default view is regged for folders in ZTC"""
+
+
+    
