@@ -8,8 +8,6 @@ from persistent import Persistent
 from zope.component import getMultiAdapter, adapts, adapter
 from zope.interface import implements, alsoProvides
 
-#from Products.OpenPlans.interfaces import IProject 
-
 try:
     from zope.interface import noLongerProvides
 except ImportError:
@@ -30,6 +28,7 @@ import logging
 _marker = object()
 LOG = KEY = "opencore.redirect"
 RESERVED_PREFIX = "opencore_redirect"
+
 
 class RedirectInfo(PersistentMapping):
     implements(IRedirectInfo)
@@ -243,8 +242,10 @@ def apply_redirect(obj, url=None, parent=None, subprojects=None):
 
 activate = apply_redirect
 
+
 def deactivate(obj):
     noLongerProvides(obj, IRedirected)
+
 
 def get_redirect_info(obj):
     if IRedirected.providedBy(obj):
@@ -259,7 +260,6 @@ def remove_subproject(obj, ids):
     for pid in ids:
         if info.get(pid):
             del info[pid]
-
 
 
 def get_annotation(obj, key, **kwargs):
