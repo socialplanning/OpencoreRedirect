@@ -8,7 +8,7 @@ from persistent import Persistent
 from zope.component import getMultiAdapter, adapts, adapter
 from zope.interface import implements, alsoProvides
 
-from Products.OpenPlans.interfaces import IProject 
+#from Products.OpenPlans.interfaces import IProject 
 
 try:
     from zope.interface import noLongerProvides
@@ -108,8 +108,6 @@ class DefaultingRedirectTraverser(Traverser):
     any IProject which has not had an explicit 
     redirection url set. 
     """
-
-    adapts(IProject)
     implements(ITraverser)
 
     @memoizedproperty 
