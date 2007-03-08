@@ -170,12 +170,39 @@ class Redirector(BrowserView, Traversable):
 
     @property
     def further_path(self):
-        less = len(self.context_path)
-        fp = self.url_path[less:]
-        if self.request._hacked_path and len(fp) > 0 and fp[-1] == 'redirect': 
-            return fp[0:-1]
+        context_path = self.context_path
+        url_path = self.url_path 
+
+        cp_len = len(context_path)
+        rest = url_path[cp_len:]
+
+        if url_path[:cp_len] != context_path: 
+            # if the url_path does not start with the context_path 
+            # the context object has not been reached using 
+            # its physical path... 
+            #
+            # here we assume it has been reached by a longer 
+            # url than its physical url by searching for 
+            # the objects name in the remainder of the 
+            # url_path, which is somewhat questionable
+            # (might it not be the first instance of the name 
+            #  in the list?) 
+            #
+            # we allow ValueError to be raised here if the 
+            # object's name is not present in the remainder 
+            # because we have no sensible choice to make 
+            # otherwise...
+
+            ob_name = context_path[-1]
+            ob_pos = rest.index(ob_name)
+            rest = rest[ob_pos+1:]
+            
+        # if 'redirect' has been placed on the url_path by traversal 
+        # hackishly, don't include it. 
+        if self.request._hacked_path and len(rest) > 0 and rest[-1] == 'redirect': 
+            return rest[:-1]
         else:
-            return fp
+            return rest
 
     class redirect_url(kproperty):
         def fget(self):
