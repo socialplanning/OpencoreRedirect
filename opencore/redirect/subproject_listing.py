@@ -1,3 +1,4 @@
+# @@ remove now in opencore.content.project
 try:
     from Products.OpenPlans.browser.projectlisting import ProjectListingView
 except ImportError:
