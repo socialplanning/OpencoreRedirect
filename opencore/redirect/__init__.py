@@ -101,6 +101,7 @@ class SelectiveRedirectTraverser(Traverser):
         # traverse normally
         return self._default_traverse(path, default=_marker, request=request)
 
+
 class DefaultingRedirectTraverser(Traverser): 
     """
     this object redirects to a default url for 
@@ -109,7 +110,7 @@ class DefaultingRedirectTraverser(Traverser):
     """
     implements(ITraverser)
 
-    @memoizedproperty 
+    @property 
     def default_host(self): 
         # XXX this is a hack ! 
         return "http://localhost:8080"
@@ -129,11 +130,12 @@ class DefaultingRedirectTraverser(Traverser):
             redirector.redirect_url = self.default_url_for(self.context, request)
             seg = path[0]
             if seg in request['PATH_INFO']: 
-                redirector.path_start = seg 
-            return redirector 
-        else: 
-            self.logger.info("Defaulting Redirector: skipping request for %s (under %s)" % (server_url, self.default_host))
-            return self._default_traverse(path, default=_marker, request=request)
+                redirector.path_start = seg
+            self.logger.info(redirector.redirect_url)
+            return redirector
+        
+        self.logger.info("Defaulting Redirector: skipping request for %s (under %s)" % (server_url, self.default_host))
+        return self._default_traverse(path, default=_marker, request=request)
 
     @property
     def logger(self):
@@ -279,17 +281,4 @@ def pathstr(zope_obj):
     return '/'.join(path)
 
 
-from opencore.interfaces import IProject
 
-@adapter(IProject, IRedirected)
-def handle_parent_child_association(parent, child):
-    child_id = child.getId()
-    parent_info = get_info(parent)
-    parent_path = redirect.pathstr(child)
-    parent_info[child_id] = parent_path
-    child_url = "%s/%s" %(parent_info.url, child_id) 
-    redirect.activate(child, url=child_url, parent=parent_path)
-
-
-def handle_child_created(child, parent):
-    handle((child, parent))
