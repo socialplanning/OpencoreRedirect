@@ -1,0 +1,9 @@
+<configure xmlns="http://namespaces.zope.org/meta">
+  <directives namespace="http://namespaces.zope.org/browser">
+    <directive
+       name="defaultredirect"
+       schema=".metadirectives.IDefaultHostDirective"
+       handler=".metaconfigure.set_default_redirect"
+     />
+  </directives>
+</configure>

@@ -7,6 +7,7 @@ from persistent.mapping import PersistentMapping
 from persistent import Persistent
 from zope.component import getMultiAdapter, adapts, adapter
 from zope.interface import implements, alsoProvides
+import urlparse 
 
 try:
     from zope.interface import noLongerProvides
@@ -81,11 +82,16 @@ class SelectiveRedirectTraverser(Traverser):
 
     def traverse(self, path, default=_marker, request=None):
         server_url = request.get('SERVER_URL')
-        
+
+        redirect_server = None
+        if self.info.url: 
+            redirect_server = urlparse.urlparse(self.info.url)[1]
+
         # check for external redirect
-        if (self.info.url and not server_url.find(self.info.url)>-1
+        if (redirect_server and not server_url.find(redirect_server)>-1
             and not path[0].startswith(RESERVED_PREFIX) and 
             not RESERVED_PREFIX in request.getURL()):
+
             obj = getMultiAdapter((self.context, request), name=KEY)
             obj.redirect_url = self.info.url
             seg = path[0]
@@ -104,37 +110,56 @@ class SelectiveRedirectTraverser(Traverser):
 
 class DefaultingRedirectTraverser(Traverser): 
     """
-    this object redirects to a default url for 
-    any IProject which has not had an explicit 
-    redirection url set. 
+    this object is a baseclass while allows
+    redirecting objects of a type which have 
+    not had an explicit redirection url set
+    to a default url. 
     """
     implements(ITraverser)
 
-    @property 
-    def default_host(self): 
-        # XXX this is a hack ! 
-        return "http://localhost:8080"
+    DEFAULT_HOST = None
+    DEFAULT_PATH = None
 
-    def default_url_for(self, object, request): 
-        # XXX this is a hack ! 
-        return "http://localhost:8080/normal_redirect"
+    @property 
+    def default_host(self):
+        """
+        """
+        return self.DEFAULT_HOST
+
+    def default_url_for(self, object, request):
+        """
+        """
+        default_host = self.default_host
+        
+        if default_host is None: 
+            return None
+
+        default_path = self.DEFAULT_PATH or ""
+        url = default_host + '/' + default_path + '/' + object.id
+        
+        self.logger.info("Default URL for %s is %s" % (object, url))
+
+        return url
 
     _default_traverse=Traverser.traverse
 
     def traverse(self, path, default=_marker, request=None): 
         server_url = request.get('SERVER_URL')
 
-        if not server_url.startswith(self.default_host): 
+        default_host = self.default_host
+
+        if default_host and not server_url.startswith(self.default_host): 
             self.logger.info("Defaulting Redirector: redirecting request for %s (not under %s)" % (server_url, self.default_host))
-            redirector = getMultiAdapter((self.context, request), name=KEY)
-            redirector.redirect_url = self.default_url_for(self.context, request)
-            seg = path[0]
-            if seg in request['PATH_INFO']: 
-                redirector.path_start = seg
-            self.logger.info(redirector.redirect_url)
-            return redirector
+            new_url = self.default_url_for(self.context, request)
+            if new_url is not None: 
+                redirector = getMultiAdapter((self.context, request), name=KEY)
+                redirector.redirect_url = new_url
+                seg = path[0]
+                if seg in request['PATH_INFO']: 
+                    redirector.path_start = seg
+                return redirector
         
-        self.logger.info("Defaulting Redirector: skipping request for %s (under %s)" % (server_url, self.default_host))
+
         return self._default_traverse(path, default=_marker, request=request)
 
     @property
