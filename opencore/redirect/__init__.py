@@ -2,7 +2,8 @@ from BTrees.OOBTree import OOBTree
 from Products.Five import BrowserView
 from Products.Five.traversable import Traversable
 from memojito import memoizedproperty
-from opencore.redirect.interfaces import IRedirected, INotRedirected, IRedirectInfo
+from opencore.redirect.interfaces import IRedirected, INotRedirected, \
+     IRedirectInfo
 from persistent.mapping import PersistentMapping
 from persistent import Persistent
 from zope.component import getMultiAdapter, adapts, adapter
@@ -37,12 +38,13 @@ class RedirectInfo(PersistentMapping):
         super(RedirectInfo, self).__init__()
         self.url = url
         self.parent = parent
-        self._p_changed=1
+        self._p_changed = 1
         
     def __repr__(self):
         return "%s -> '%s' => %s" %(Persistent.__repr__(self),
                                     self.url,
                                     super(RedirectInfo, self).__repr__())
+
 
 def get_annotation(obj, key, **kwargs):
     ann = IAnnotations(obj)
@@ -58,7 +60,6 @@ def get_annotation(obj, key, **kwargs):
 
 class RedirectTraverserBase(Traverser): 
 
-
     _default_traverse=Traverser.traverse
     
     def should_ignore(self, ob, request): 
@@ -70,10 +71,12 @@ class RedirectTraverserBase(Traverser):
             not ob in request['PARENTS']): 
             return True
 
-        return False 
-        
+        return False
+
+
 class SelectiveRedirectTraverser(RedirectTraverserBase):
-    """if a path matches a criterion, check agains mapping, and redirect if necessary"""
+    """if a path matches a criterion, check agains mapping, and
+    redirect if necessary"""
     adapts(IRedirected)
     implements(ITraverser)
 
@@ -97,7 +100,8 @@ class SelectiveRedirectTraverser(RedirectTraverserBase):
 
     def traverse(self, path, default=_marker, request=None):
         if self.should_ignore(self.context, request): 
-            return self._default_traverse(path, default=_marker, request=request)
+            return self._default_traverse(path, default=_marker,
+                                          request=request)
 
         server_url = request.get('SERVER_URL')
         redirect_server = None
@@ -160,15 +164,17 @@ class DefaultingRedirectTraverser(RedirectTraverserBase):
     def traverse(self, path, default=_marker, request=None): 
 
         if self.should_ignore(self.context, request): 
-            return self._default_traverse(path, default=_marker, request=request)            
+            return self._default_traverse(path, default=_marker,
+                                          request=request)            
         
-
         server_url = request.get('SERVER_URL')
 
         default_host = self.default_host
 
         if default_host and not server_url.startswith(self.default_host): 
-            self.logger.info("Defaulting Redirector: redirecting request for %s (not under %s)" % (server_url, self.default_host))
+            self.logger.info("Defaulting Redirector: redirecting request "
+                             "for %s (not under %s)" % (server_url,
+                                                        self.default_host))
             new_url = self.default_url_for(self.context, request)
             if new_url is not None: 
                 redirector = getMultiAdapter((self.context, request), name=KEY)
@@ -177,7 +183,6 @@ class DefaultingRedirectTraverser(RedirectTraverserBase):
                 if seg in request['PATH_INFO']: 
                     redirector.path_start = seg
                 return redirector
-        
 
         return self._default_traverse(path, default=_marker, request=request)
 
@@ -242,7 +247,8 @@ class Redirector(BrowserView, Traversable):
             
         # if 'redirect' has been placed on the url_path by traversal 
         # hackishly, don't include it. 
-        if self.request._hacked_path and len(rest) > 0 and rest[-1] == 'redirect': 
+        if self.request._hacked_path and len(rest) > 0 and \
+               rest[-1] == 'redirect': 
             return rest[:-1]
         else:
             return rest
@@ -275,7 +281,8 @@ class Redirector(BrowserView, Traversable):
 
 def apply_redirect(obj, url=None, parent=None, subprojects=None):
     alsoProvides(obj, IRedirected)
-    info = get_annotation(obj, KEY, factory=RedirectInfo, url=url, parent=parent)
+    info = get_annotation(obj, KEY, factory=RedirectInfo, url=url,
+                          parent=parent)
     if info.url is not url:
         info.url = url
     if info.parent is not parent:
@@ -302,7 +309,8 @@ get_info = get_redirect_info
 
     
 def remove_subproject(obj, ids):
-    info= get_annotation(obj, KEY, factory=RedirectInfo, url=url, parent=parent)
+    info= get_annotation(obj, KEY, factory=RedirectInfo, url=url,
+                         parent=parent)
     for pid in ids:
         if info.get(pid):
             del info[pid]
@@ -323,6 +331,3 @@ def get_annotation(obj, key, **kwargs):
 def pathstr(zope_obj):
     path = zope_obj.getPhysicalPath()
     return '/'.join(path)
-
-
-
