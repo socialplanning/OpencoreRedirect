@@ -140,16 +140,10 @@ class DefaultingRedirectTraverser(RedirectTraverserBase):
     DEFAULT_HOST = None
     DEFAULT_PATH = None
 
-    @property 
-    def default_host(self):
-        """
-        """
-        return self.DEFAULT_HOST
-
     def default_url_for(self, object, request):
         """
         """
-        default_host = self.default_host
+        default_host = self.DEFAULT_HOST
         
         if default_host is None: 
             return None
@@ -169,12 +163,11 @@ class DefaultingRedirectTraverser(RedirectTraverserBase):
         
         server_url = request.get('SERVER_URL')
 
-        default_host = self.default_host
+        default_host = self.DEFAULT_HOST
 
-        if default_host and not server_url.startswith(self.default_host): 
+        if default_host and not server_url.startswith(default_host): 
             self.logger.info("Defaulting Redirector: redirecting request "
-                             "for %s (not under %s)" % (server_url,
-                                                        self.default_host))
+                             "for %s (not under %s)" % (server_url, default_host))
             new_url = self.default_url_for(self.context, request)
             if new_url is not None: 
                 redirector = getMultiAdapter((self.context, request), name=KEY)
@@ -225,6 +218,8 @@ class Redirector(BrowserView, Traversable):
         rest = url_path[cp_len:]
 
         if url_path[:cp_len] != context_path: 
+            # XXX 
+            #
             # if the url_path does not start with the context_path 
             # the context object has not been reached using 
             # its physical path... 
@@ -240,7 +235,12 @@ class Redirector(BrowserView, Traversable):
             # object's name is not present in the remainder 
             # because we have no sensible choice to make 
             # otherwise...
-
+            #
+            # now if getPhysicalPathFromURL could actually return 
+            # the kind of path that context.getPhysicalPath does, 
+            # we'd be in better shape... we could simply strip 
+            # off the prefix context_path from url_path 
+            #
             ob_name = context_path[-1]
             ob_pos = rest.index(ob_name)
             rest = rest[ob_pos+1:]

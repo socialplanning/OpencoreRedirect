@@ -4,7 +4,11 @@
 
   <interface interface="opencore.redirect.interfaces.IRedirected" />
 
-  <adapter factory="opencore.redirect.SelectiveRedirectTraverser" />
+  <adapter 
+     for=".IRedirected" 
+     provides="zope.app.traversing.interfaces.ITraverser" 
+     factory="opencore.redirect.SelectiveRedirectTraverser" 
+   />
 
   <browser:page
      for="opencore.redirect.interfaces.IRedirected"
