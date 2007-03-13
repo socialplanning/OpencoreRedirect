@@ -10,6 +10,8 @@ except ImportError:
 class IRedirected(IAnnotatable):
     """An object that submits to selective redirection traversal"""
 
+class INotRedirected(Interface): 
+    """An object that is ignored by the redirector under all circumstances"""
 
 class IRedirectInfo(IReadMapping, IWriteMapping):
     """Redirect annotation BTree bag"""

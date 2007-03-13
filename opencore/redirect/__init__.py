@@ -2,7 +2,7 @@ from BTrees.OOBTree import OOBTree
 from Products.Five import BrowserView
 from Products.Five.traversable import Traversable
 from memojito import memoizedproperty
-from opencore.redirect.interfaces import IRedirected, IRedirectInfo
+from opencore.redirect.interfaces import IRedirected, INotRedirected, IRedirectInfo
 from persistent.mapping import PersistentMapping
 from persistent import Persistent
 from zope.component import getMultiAdapter, adapts, adapter
@@ -56,14 +56,29 @@ def get_annotation(obj, key, **kwargs):
     return notes
 
 
-class SelectiveRedirectTraverser(Traverser):
+class RedirectTraverserBase(Traverser): 
+
+
+    _default_traverse=Traverser.traverse
+    
+    def should_ignore(self, ob, request): 
+        # if the object is explicitly tagged as INotRedirected 
+        # always ignore it. Also ignore if the object is 
+        # not being published. 
+        if (INotRedirected.providedBy(self.context) or 
+            not 'PARENTS' in request or  
+            not ob in request['PARENTS']): 
+            return True
+
+        return False 
+        
+class SelectiveRedirectTraverser(RedirectTraverserBase):
     """if a path matches a criterion, check agains mapping, and redirect if necessary"""
     adapts(IRedirected)
     implements(ITraverser)
 
     debug = False
     get_root = staticmethod(get_root)
-    _default_traverse=Traverser.traverse
 
     @property
     def logger(self):
@@ -81,8 +96,10 @@ class SelectiveRedirectTraverser(Traverser):
         return default
 
     def traverse(self, path, default=_marker, request=None):
-        server_url = request.get('SERVER_URL')
+        if self.should_ignore(self.context, request): 
+            return self._default_traverse(path, default=_marker, request=request)
 
+        server_url = request.get('SERVER_URL')
         redirect_server = None
         if self.info.url: 
             redirect_server = urlparse.urlparse(self.info.url)[1]
@@ -91,7 +108,6 @@ class SelectiveRedirectTraverser(Traverser):
         if (redirect_server and not server_url.find(redirect_server)>-1
             and not path[0].startswith(RESERVED_PREFIX) and 
             not RESERVED_PREFIX in request.getURL()):
-
             obj = getMultiAdapter((self.context, request), name=KEY)
             obj.redirect_url = self.info.url
             seg = path[0]
@@ -108,7 +124,7 @@ class SelectiveRedirectTraverser(Traverser):
         return self._default_traverse(path, default=_marker, request=request)
 
 
-class DefaultingRedirectTraverser(Traverser): 
+class DefaultingRedirectTraverser(RedirectTraverserBase): 
     """
     this object is a baseclass while allows
     redirecting objects of a type which have 
@@ -141,9 +157,12 @@ class DefaultingRedirectTraverser(Traverser):
 
         return url
 
-    _default_traverse=Traverser.traverse
-
     def traverse(self, path, default=_marker, request=None): 
+
+        if self.should_ignore(self.context, request): 
+            return self._default_traverse(path, default=_marker, request=request)            
+        
+
         server_url = request.get('SERVER_URL')
 
         default_host = self.default_host
