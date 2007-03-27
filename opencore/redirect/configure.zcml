@@ -21,7 +21,7 @@
   <browser:page
      for="OFS.Folder.IFolder"
      class=".hackyform.RedirectSetupForm"
-     permission="five.ManageSite"
+     permission="zope2.ViewManagementScreens"
      name="opencore_redirect_config" />
 
   <!-- fivish compat 2.9 bits -->
