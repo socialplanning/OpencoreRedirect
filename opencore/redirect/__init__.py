@@ -295,6 +295,11 @@ def apply_redirect(obj, url=None, parent=None, subprojects=None):
 
 activate = apply_redirect
 
+def get_redirect_url(obj):
+    try:
+        return getattr(get_redirect_info(obj), 'url', None)
+    except TypeError:
+        return None
 
 def deactivate(obj):
     noLongerProvides(obj, IRedirected)
