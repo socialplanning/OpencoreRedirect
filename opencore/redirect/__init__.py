@@ -3,7 +3,7 @@ from Products.Five import BrowserView
 from Products.Five.traversable import Traversable
 from memojito import memoizedproperty
 from opencore.redirect.interfaces import IRedirected, INotRedirected, \
-     IRedirectInfo
+     IRedirectInfo, IDefaultHost
 from persistent.mapping import PersistentMapping
 from persistent import Persistent
 from zope.component import getMultiAdapter, adapts, adapter
