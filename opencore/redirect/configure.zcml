@@ -1,5 +1,6 @@
 <configure xmlns="http://namespaces.zope.org/zope"
            xmlns:browser="http://namespaces.zope.org/browser"
+	   xmlns:opencore="http://namespaces.openplans.org/opencore"
 	   xmlns:five="http://namespaces.zope.org/five">
 
   <interface interface="opencore.redirect.interfaces.IRedirected" />
@@ -24,6 +25,13 @@
      permission="zope2.ViewManagementScreens"
      name="opencore_redirect_config" />
 
+
+  <utility
+     name="opencore.redirect.default_host"
+     component="opencore.redirect.global_defaulthost"
+     />
+
+
   <!-- fivish compat 2.9 bits -->
   <five:traversable class="OFS.Application.Application" />
   <five:traversable class="OFS.Folder.Folder" />
@@ -39,5 +47,12 @@
      class="OFS.Folder.Folder" 
      interface="zope.app.annotation.interfaces.IAttributeAnnotatable"
      />
+ 
+  <!-- for development purposes only -->
+  <!-- opencore:defaultredirect 
+     host="localhost:8080" 
+     path="/"
+     for="blah.blah.BlahClass"
+     /-->
 
 </configure>
