@@ -48,11 +48,11 @@
      interface="zope.app.annotation.interfaces.IAttributeAnnotatable"
      />
  
-  <!-- for development purposes only -->
-  <!-- opencore:defaultredirect 
+  <!-- for development purposes only (these are the defaults
+       anyway) -->
+  <!-- opencore:defaulthost
      host="localhost:8080" 
      path="/"
-     for="blah.blah.BlahClass"
-     /-->
+     / -->
 
 </configure>
