@@ -112,12 +112,14 @@ class SelectiveRedirectTraverser(RedirectTraverserBase):
         if (redirect_server and not server_url.find(redirect_server)>-1
             and not path[0].startswith(RESERVED_PREFIX) and 
             not RESERVED_PREFIX in request.getURL()):
-            obj = getMultiAdapter((self.context, request), name=KEY)
-            obj.redirect_url = self.info.url
-            seg = path[0]
-            if seg in request['PATH_INFO']:
-                obj.path_start = seg
-            return obj
+            
+            view = getMultiAdapter((self.context, request), name=KEY)
+            view.redirect_url = self.info.url
+            view.redirect()
+##             seg = path[0]
+##             if seg in request['PATH_INFO']:
+##                 obj.path_start = seg
+##             return obj
 
         # check for internal redirect
         obj = self.reroute(path[0])
@@ -156,7 +158,7 @@ class DefaultingRedirectTraverser(RedirectTraverserBase):
         return url
 
     def traverse(self, path, default=_marker, request=None): 
-
+        import pdb;pdb.set_trace()
         if self.should_ignore(self.context, request): 
             return self._default_traverse(path, default=_marker,
                                           request=request)            
@@ -263,7 +265,7 @@ class Redirector(BrowserView, Traversable):
         if getattr(self.request, "__redirected__", False):
             return
 
-        self.request.RESPONSE.redirect(self.redirect_url)
+        self.request.RESPONSE.redirect(self.redirect_url, lock=1)
         self.logger.info("Redirected to %s" %self.redirect_url)
             
         self.request.__redirected__=True 
@@ -336,3 +338,12 @@ def get_annotation(obj, key, **kwargs):
 def pathstr(zope_obj):
     path = zope_obj.getPhysicalPath()
     return '/'.join(path)
+
+
+class DefaultHost(object):
+    implements(IDefaultHost)
+    def __init__(defhost='localhost:8080', defpath='/'):
+        self.DEFAULT_PATH = defpath
+        self.DEFAULT_HOST = defhost
+
+global_defaulthost = DefaultHost()
