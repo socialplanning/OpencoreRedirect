@@ -343,7 +343,7 @@ def pathstr(zope_obj):
 class DefaultHost(object):
     implements(IDefaultHost)
     
-    def __init__(defhost='localhost:8080', defpath='/'):
+    def __init__(self, defhost='localhost:8080', defpath='/'):
         self.DEFAULT_PATH = defpath
         self.DEFAULT_HOST = defhost
 
