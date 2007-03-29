@@ -5,10 +5,14 @@
 
   <interface interface="opencore.redirect.interfaces.IRedirected" />
 
+  <subscriber handler="opencore.redirect.notify_redirect_event" />
+  <subscriber handler="opencore.redirect.explicit_redirection" />
+  <subscriber handler="opencore.redirect.defaulting_redirection" />
+
   <adapter 
      for=".IRedirected" 
      provides="zope.app.traversing.interfaces.ITraverser" 
-     factory="opencore.redirect.SelectiveRedirectTraverser" 
+     factory="opencore.redirect.SubitemSpoofingTraverser" 
    />
 
   <browser:page
@@ -26,11 +30,7 @@
      name="opencore_redirect_config" />
 
 
-  <utility
-     name="opencore.redirect.default_host"
-     component="opencore.redirect.global_defaulthost"
-     />
-
+  <utility component="opencore.redirect.global_defaulthost" />
 
   <!-- fivish compat 2.9 bits -->
   <five:traversable class="OFS.Application.Application" />
