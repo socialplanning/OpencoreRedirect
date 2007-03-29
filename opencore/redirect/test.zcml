@@ -9,5 +9,6 @@
      template="hello-world.pt"
      />
 
+  <subscriber handler="opencore.redirect.log_redirect_event" />
 
 </configure>

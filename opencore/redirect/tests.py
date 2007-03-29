@@ -32,21 +32,23 @@ def readme_setup(tc):
     tc.new_request = utils.new_request()
     import opencore.redirect
     from zope.app.annotation.interfaces import IAttributeAnnotatable
+    from zope.testing.loggingsupport import InstalledHandler
     zcml.load_config('test.zcml', opencore.redirect)
     tc.new_request.physicalPathFromURL=returno(_ppfu, 'path')
     tc.new_request.getURL=returno(_url, 'url')
     tc.new_request._hacked_path=None
     alsoProvides(tc.app, IAttributeAnnotatable)
+    tc.log = InstalledHandler(opencore.redirect.LOG)
 
 def test_suite():
     from zope.component import getMultiAdapter
     from opencore.redirect import RedirectInfo, IRedirectInfo, IRedirected
-    from opencore.redirect import SelectiveRedirectTraverser, ITraverser, get_redirect_info
+    from opencore.redirect import ITraverser, get_redirect_info
     from opencore.redirect.interfaces import ITestObject
     from zope.interface import alsoProvides
+    
     global _url
     global _ppfu
-
     
     def set_path(*path):
         _ppfu.path = path

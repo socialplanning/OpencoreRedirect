@@ -2,6 +2,8 @@ from zope.interface.common.mapping import IReadMapping, IWriteMapping
 from zope.interface import Interface, Attribute, implements
 from zope.schema import TextLine
 
+HOOK_NAME = '__redirection_hook__'
+
 try:
     from zope.annotation.interfaces import IAnnotatable
 except ImportError:
@@ -32,7 +34,20 @@ class IDefaultHost(Interface):
     path = TextLine(
         title=u"Default Path Prefix", 
         description=u"The default path to prepend to the object",
+        required=False
         )
+
+
+class IRedirectEvent(Interface):
+    request = Attribute('current request')
+    obj = Attribute('current traversed object')
+
+
+class RedirectEvent(object):
+    implements(IRedirectEvent)
+    def __init__(self, obj, request):
+        self.obj = obj
+        self.request = request
 
 
 class ITestObject(Interface):
@@ -41,3 +56,5 @@ class ITestObject(Interface):
 
 
     
+
+
