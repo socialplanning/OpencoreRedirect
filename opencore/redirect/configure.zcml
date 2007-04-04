@@ -25,7 +25,7 @@
 
   <browser:page
      for="OFS.Folder.IFolder"
-     class=".hackyform.RedirectSetupForm"
+     class=".management.RedirectSetupForm"
      permission="zope2.ViewManagementScreens"
      name="opencore_redirect_config" />
 
