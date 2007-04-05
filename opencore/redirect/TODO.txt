@@ -6,3 +6,7 @@
 
 * ask luke about the stuff other than management iface
 
+* set up subscribers and extra events for vhost management
+
+* finish defaulting and member tests
+
