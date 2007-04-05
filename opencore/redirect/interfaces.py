@@ -55,6 +55,13 @@ class ITestObject(Interface):
     """because for some reason, no default view is regged for folders in ZTC"""
 
 
+class IRedirectSetup(Interface): 
     
+    redirect_url = schema.TextLine(
+        title = u'Redirect URL', 
+        required = True, 
+        description = u'redirect to this url')
+    
+
 
 
