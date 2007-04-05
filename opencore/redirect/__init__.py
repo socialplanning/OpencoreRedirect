@@ -268,6 +268,7 @@ def activate(obj, url=None, parent=None, subprojects=None):
             info[project_name] = path
     info._p_changed=1
     enableRedirectHook(obj)
+    #@@ notify here?
     return info
 
 apply_redirect = activate
@@ -283,7 +284,7 @@ def get_redirect_url(obj):
 def deactivate(obj):
     noLongerProvides(obj, IRedirected)
     deactivateRedirectHook(obj)
-
+    #@@ notify here?
 
 def get_info(obj):
     if IRedirected.providedBy(obj):
