@@ -29,11 +29,12 @@ class IDefaultHost(Interface):
     instance('opencore.redirect.default_host')"""
     host = TextLine(
         title=u"Default Host", 
-        description=u"The hostname to default to")
+        description=u"The hostname to default to",
+        required=False)
 
     path = TextLine(
         title=u"Default Path Prefix", 
-        description=u"The default path to prepend to the object",
+        description=u"The default path to prepend to the object path",
         required=False
         )
 
