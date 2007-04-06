@@ -219,6 +219,7 @@ If we reactivate, the listener will bail out(indicated by False)::
     >>> info = redirect.activate(self.app, url="http://redirected", parent=None)
     >>> redirect.defaulting_redirection(self.app, event)
     False
+
     
 Traversal compliance
 ====================
@@ -236,6 +237,7 @@ redirect::
     Content-Type: text/html; charset=iso-8859-15...
     Actual   URL: http://localhost/test_folder_1_/index.html
     Physical URL: http://localhost/test_folder_1_...
+
 
 And to the contents of non-subredirected content::
 
