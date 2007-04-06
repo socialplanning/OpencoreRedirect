@@ -12,6 +12,7 @@ from zope.formlib import form
 from zope.interface import Interface, implements
 import logging
 from five.intid.site import addUtility
+from Products.Five import BrowserView
 
 class BaseAdapter(object):
     def __init__(self, context):
@@ -40,9 +41,11 @@ class RedirectSetupForm(BaseForm):
     form_fields = form.FormFields(IRedirectSetup)
     label = 'Activate Redirection' 
 
+
 class DefaultHostForm(BaseForm):
     form_fields = form.FormFields(IDefaultHost)
     label = 'Set Default Host' 
+
 
 class DefaultHostSchemaAdapter(BaseAdapter):
     adapts(IPossibleSite)
@@ -100,6 +103,31 @@ class RedirectConfigSchemaAdapter(BaseAdapter):
                 self.info[key] = value
 
 
+class DefaultHostInstall(BrowserView):
+    @property
+    def context(self):
+        return self._context[0]
+    
+    def __init__(self, context, request):
+        self._context = context,
+        self.request = request
+        doinstall = self.request.get('install', None)
+        if doinstall:
+            self.install()
+
+    def install(self):
+        addUtility(self.context, IDefaultHost, redirect.LocalDefaultHost, findroot=False)
+
+    @property
+    def installed(self):
+        installed = False
+        try:
+            dh = getUtility(IDefaultHost)
+            if dh and dh is not redirect.global_defaulthost:
+                installed = True
+        except ComponentLookupError, e:
+            pass
+        return installed
 
 
 
