@@ -37,6 +37,12 @@
      permission="zope2.ViewManagementScreens"
      name="opencore_redirect_config" />
 
+  <adapter factory=".management.DefaultHostSchemaAdapter" />
+  <browser:page
+     for="OFS.Folder.IFolder"
+     class=".management.DefaultHostForm"
+     permission="zope2.ViewManagementScreens"
+     name="opencore-defaulthost.html" />
 
   <utility component="opencore.redirect.global_defaulthost" />
 
