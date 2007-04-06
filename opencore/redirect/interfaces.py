@@ -57,7 +57,7 @@ class ITestObject(Interface):
 
 class IRedirectSetup(Interface): 
     
-    redirect_url = schema.TextLine(
+    redirect_url = TextLine(
         title = u'Redirect URL', 
         required = True, 
         description = u'redirect to this url')

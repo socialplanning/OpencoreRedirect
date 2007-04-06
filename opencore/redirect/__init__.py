@@ -283,7 +283,7 @@ def get_redirect_url(obj):
 
 def deactivate(obj):
     noLongerProvides(obj, IRedirected)
-    deactivateRedirectHook(obj)
+    disableRedirectHook(obj)
     #@@ notify here?
 
 def get_info(obj):
