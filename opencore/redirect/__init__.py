@@ -105,7 +105,7 @@ def defaulting_redirection(obj, event):
     if not should_ignore(obj, request) and \
            (default_host and not server_url.startswith(default_host)):
         
-        self.logger.info("Defaulting Redirector: redirecting request "
+        logger.info("Defaulting Redirector: redirecting request "
                          "for %s (not under %s)" % (server_url, default_host))
             
         new_url = default_url_for(default_host, obj, request, default_path=path)
