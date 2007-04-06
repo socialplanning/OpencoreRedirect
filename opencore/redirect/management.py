@@ -2,7 +2,6 @@ from zope.interface import Interface, implements
 from zope.component import adapts
 from zope.formlib import form
 from plone.app.form.validators import null_validator
-#from Products.Five.formlib import formbase
 from interfaces import IRedirectSetup
 from opencore import redirect 
 from opencore.redirect import LOG
@@ -58,7 +57,7 @@ class RedirectSetupForm(FieldsetsEditForm):
 
     label = 'Activate Redirection' 
 
-    @form.action('Activate')
+    @form.action('Save changes')
     def handle_edit_action(self, action, data):
         if form.applyChanges(self.context, self.form_fields, data,
                              self.adapters):
@@ -66,16 +65,13 @@ class RedirectSetupForm(FieldsetsEditForm):
         else:
             self.status = "No changes made."
 
-    @form.action('Deactivate', validator=lambda *args:())
-    def handle_deactivate_action(self, action, data):
-        redirect_url = redirect.get_redirect_url(self.context)
-        if redirect_url is None:
-            self.status = "Error: No Redirection to Deactivate"
-        else:
-            logging.getLogger(LOG).info("Deactivating redirect url %s on %s" % (redirect_url, self.context))
-            redirect.deactivate(self.context)
-            self.status = "Deactivated Redirection"
-            
+    @form.action(u'Cancel', validator=null_validator)
+    def handle_cancel_action(self, action, data):
+        IStatusMessage(self.request).addStatusMessage("Changes canceled.", type="info")
+        url = getMultiAdapter((self.context, self.request), name='absolute_url')()
+        self.request.response.redirect(url)
+        return
+
 ##     @form.action('Activate')
 ##     def handle_activate_action(self, action, data): 
 ##         redirect_url = data.get('redirect_url')
