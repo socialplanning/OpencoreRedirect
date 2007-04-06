@@ -3,6 +3,13 @@
 	   xmlns:opencore="http://namespaces.openplans.org/opencore"
 	   xmlns:five="http://namespaces.zope.org/five">
 
+  <adapter
+      for="Products.Five.BrowserView"
+      factory="plone.app.form.default_named_template_adapter"
+      name="default"
+      provides="zope.formlib.namedtemplate.INamedTemplate"
+      />
+
   <interface interface="opencore.redirect.interfaces.IRedirected" />
 
   <subscriber handler="opencore.redirect.notify_redirect_event" />
