@@ -50,3 +50,5 @@
 [2:39pm] whit: I'm copying this transcript, but is there a place where this is all more or less documented in the vhoster?
 
 ianbicking: I mostly outlined it here: http://www.openplans.org/projects/deliverance/lists/deliverance-discussion/archive/2007/01/1168372208532/forum_view
+
+http://codespeak.net/svn/z3/deliverance/DeliveranceVHoster/trunk/docs/res

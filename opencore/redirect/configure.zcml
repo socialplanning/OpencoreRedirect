@@ -23,7 +23,7 @@
    />
 
   <browser:page
-     for="opencore.redirect.interfaces.IRedirected"
+     for="*"
      class="opencore.redirect.Redirector"
      permission="zope.Public"
      attribute="redirect"

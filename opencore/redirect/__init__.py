@@ -90,12 +90,12 @@ def explicit_redirection(obj, event):
             
         set_redirect(obj, request, info.url)
 
-# @@ consider stacking event ie. redispatching
+# @@ consider stacking event ie. make this listener before
+# redispatching
 @adapter(Interface, IRedirectEvent)
 def defaulting_redirection(obj, event):
     if IRedirected.providedBy(obj):
-        # bail out
-        return
+        return False # bail out
     request=event.request
     host_info = getUtility(IDefaultHost)
     default_host = host_info.host
@@ -256,8 +256,9 @@ def disableRedirectHook(obj):
 
 # == convenience functions == #
 
-def activate(obj, url=None, parent=None, subprojects=None):
-    alsoProvides(obj, IRedirected)
+def activate(obj, url=None, parent=None, subprojects=None, explicit=True):
+    if explicit:
+        alsoProvides(obj, IRedirected)
     info = get_annotation(obj, KEY, factory=RedirectInfo, url=url,
                           parent=parent)
     if info.url is not url:
