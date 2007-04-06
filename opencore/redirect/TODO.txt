@@ -15,5 +15,6 @@
 
 * finish defaulting and member tests
 
+* ObEv subscribers for project rename / deletion
 
 
