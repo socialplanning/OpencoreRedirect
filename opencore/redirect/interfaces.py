@@ -1,6 +1,6 @@
 from zope.interface.common.mapping import IReadMapping, IWriteMapping
 from zope.interface import Interface, Attribute, implements
-from zope.schema import TextLine
+from zope.schema import TextLine, Bool
 
 HOOK_NAME = '__redirection_hook__'
 
@@ -56,11 +56,16 @@ class ITestObject(Interface):
 
 
 class IRedirectSetup(Interface): 
+    activate = Bool(title="activate",
+                           description="check to activate redirection",
+                           default=False)
     
     redirect_url = TextLine(
         title = u'Redirect URL', 
         required = True, 
         description = u'redirect to this url')
+
+
     
 
 
