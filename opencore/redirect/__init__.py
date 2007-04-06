@@ -93,7 +93,6 @@ def explicit_redirection(obj, event):
 # @@ consider stacking event ie. redispatching
 @adapter(Interface, IRedirectEvent)
 def defaulting_redirection(obj, event):
-    import pdb;pdb.set_trace()
     if IRedirected.providedBy(obj):
         # bail out
         return
@@ -105,9 +104,10 @@ def defaulting_redirection(obj, event):
     if not should_ignore(obj, request) and \
            (default_host and not server_url.startswith(default_host)):
         
-        logger.info("Defaulting Redirector: redirecting request "
+        logger.info("DF: redirecting request "
                          "for %s (not under %s)" % (server_url, default_host))
-            
+
+        #@@ def url fuxored?
         new_url = default_url_for(default_host, obj, request, default_path=path)
         if new_url is not None:
             set_redirect(obj, request, new_url)
@@ -347,7 +347,7 @@ def default_url_for(default_host, object, request, default_path=""):
 
     url = '/'.join([x for x in default_host, default_path, object.getId(), if x])
     
-    self.logger.info("Default URL for %s is %s" % (object, url))
+    logger.info("Default URL for %s is %s" % (object, url))
 
     return url
 
