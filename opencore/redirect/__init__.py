@@ -90,9 +90,10 @@ def explicit_redirection(obj, event):
             
         set_redirect(obj, request, info.url)
 
-
+# @@ consider stacking event ie. redispatching
 @adapter(Interface, IRedirectEvent)
 def defaulting_redirection(obj, event):
+    import pdb;pdb.set_trace()
     if IRedirected.providedBy(obj):
         # bail out
         return
@@ -100,7 +101,7 @@ def defaulting_redirection(obj, event):
     host_info = getUtility(IDefaultHost)
     default_host = host_info.host
     path = host_info.path
-    server_url = self.request.get('SERVER_URL')
+    server_url = request.get('SERVER_URL')
     if not should_ignore(obj, request) and \
            (default_host and not server_url.startswith(default_host)):
         
@@ -281,9 +282,10 @@ def get_redirect_url(obj):
         return None
 
 
-def deactivate(obj):
+def deactivate(obj, disable_hook=False):
     noLongerProvides(obj, IRedirected)
-    disableRedirectHook(obj)
+    if disable_hook:
+        disableRedirectHook(obj)
     #@@ notify here?
 
 def get_info(obj):
