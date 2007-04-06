@@ -36,7 +36,7 @@ class RedirectConfigSchemaAdapter(object):
             
     class activate(classproperty):
         def fget(self):
-            return IRedirected.providedBy(self.context)
+            return redirect.IRedirected.providedBy(self.context)
 
         def fset(self, val):
             if val:
