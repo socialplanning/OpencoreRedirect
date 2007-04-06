@@ -181,33 +181,33 @@ class Redirector(BrowserView, Traversable):
         cp_len = len(context_path)
         rest = url_path[cp_len:]
 
-        if url_path[:cp_len] != context_path: 
-            # XXX 
-            #
-            # if the url_path does not start with the context_path 
-            # the context object has not been reached using 
-            # its physical path... 
-            #
-            # here we assume it has been reached by a longer 
-            # url than its physical url by searching for 
-            # the objects name in the remainder of the 
-            # url_path, which is somewhat questionable
-            # (might it not be the first instance of the name 
-            #  in the list?) 
-            #
-            # we allow ValueError to be raised here if the 
-            # object's name is not present in the remainder 
-            # because we have no sensible choice to make 
-            # otherwise...
-            #
-            # now if getPhysicalPathFromURL could actually return 
-            # the kind of path that context.getPhysicalPath does, 
-            # we'd be in better shape... we could simply strip 
-            # off the prefix context_path from url_path 
-            #
-            ob_name = context_path[-1]
-            ob_pos = rest.index(ob_name)
-            rest = rest[ob_pos+1:]
+##         if url_path[:cp_len] != context_path: 
+##             # XXX 
+##             #
+##             # if the url_path does not start with the context_path 
+##             # the context object has not been reached using 
+##             # its physical path... 
+##             #
+##             # here we assume it has been reached by a longer 
+##             # url than its physical url by searching for 
+##             # the objects name in the remainder of the 
+##             # url_path, which is somewhat questionable
+##             # (might it not be the first instance of the name 
+##             #  in the list?) 
+##             #
+##             # we allow ValueError to be raised here if the 
+##             # object's name is not present in the remainder 
+##             # because we have no sensible choice to make 
+##             # otherwise...
+##             #
+##             # now if getPhysicalPathFromURL could actually return 
+##             # the kind of path that context.getPhysicalPath does, 
+##             # we'd be in better shape... we could simply strip 
+##             # off the prefix context_path from url_path 
+##             #
+##             ob_name = context_path[-1]
+##             ob_pos = rest.index(ob_name)
+##             rest = rest[ob_pos+1:]
             
         # if 'redirect' has been placed on the url_path by traversal 
         # hackishly, don't include it. 
@@ -287,9 +287,7 @@ def deactivate(obj):
     #@@ notify here?
 
 def get_info(obj):
-    if IRedirected.providedBy(obj):
-        return get_annotation(obj, KEY)
-    raise TypeError('Object does not provide %s' %IRedirected)
+    return get_annotation(obj, KEY)
 
 get_redirect_info = get_info
 
