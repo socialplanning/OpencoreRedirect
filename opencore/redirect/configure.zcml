@@ -42,7 +42,15 @@
      for="OFS.Folder.IFolder"
      class=".management.DefaultHostForm"
      permission="zope2.ViewManagementScreens"
-     name="opencore-defaulthost.html" />
+     name="manage-defaulthost.html" />
+
+  <browser:page
+     for="OFS.interfaces.IFolder"
+     class=".management.DefaultHostInstall"
+     permission="five.ManageSite"
+     template="install.pt"
+     name="install-ldh.html"
+     />
 
   <utility component="opencore.redirect.global_defaulthost" />
 
