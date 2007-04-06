@@ -10,12 +10,12 @@ import logging
 from memojito import memoizedproperty
 
 from opencore.redirect.classproperty import property as classproperty
-from opencore.redirect 
+from opencore import redirect 
 from plone.fieldsets.form import FieldsetsEditForm
-import OFS.Folder.Folder
+from OFS.Folder import Folder
 
 class RedirectConfigSchemaAdapter(object):
-    adapts(OFS.Folder.Folder)
+    adapts(Folder)
     implements(IRedirectSetup)
     
     def __init__(self, context):
@@ -23,7 +23,7 @@ class RedirectConfigSchemaAdapter(object):
 ##         ptool = getUtility(IPropertiesTool)
 ##         self.encoding = ptool.getProperty('default_charset', None)
 
-    @memoizeproperty
+    @memoizedproperty
     def info(self):
         return redirect.get_info(self.context)
 
