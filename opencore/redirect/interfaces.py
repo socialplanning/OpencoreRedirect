@@ -56,8 +56,8 @@ class ITestObject(Interface):
 
 
 class IRedirectSetup(Interface): 
-    activate = Bool(title="activate",
-                           description="check to activate redirection",
+    activate = Bool(title=u"activate",
+                           description=u"check to activate redirection",
                            default=False)
     
     redirect_url = TextLine(
