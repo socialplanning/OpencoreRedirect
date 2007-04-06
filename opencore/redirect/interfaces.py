@@ -62,7 +62,7 @@ class IRedirectSetup(Interface):
     
     redirect_url = TextLine(
         title = u'Redirect URL', 
-        required = True, 
+        required = False, 
         description = u'redirect to this url')
 
 
