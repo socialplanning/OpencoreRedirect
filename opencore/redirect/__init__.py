@@ -1,4 +1,5 @@
 from BTrees.OOBTree import OOBTree
+from OFS.SimpleItem import SimpleItem
 from Products.Five import BrowserView
 from Products.Five.traversable import Traversable
 from memojito import memoizedproperty
@@ -20,7 +21,8 @@ except ImportError:
 from zope.app.traversing.adapters import Traverser, _marker
 from zope.app.traversing.interfaces import ITraverser
 from five.intid.keyreference import get_root
-from opencore.redirect.classproperty import property as kproperty
+from opencore.redirect.classproperty import property as classproperty
+from zope.app.component import queryNextUtility
 
 try:
     from zope.annotation.interfaces import IAnnotations, IAnnotatable
@@ -61,6 +63,39 @@ class DefaultHost(object):
 
 global_defaulthost = DefaultHost()
 
+class LocalDefaultHost(SimpleItem):
+    implements(IDefaultHost)
+    def __init__(self, defhost='', defpath=''):
+        self._path = defpath
+        self._host = defhost
+
+    def fetch(attr, val=None, cur_dh=None):
+        if val: return val
+        if not cur_dh:
+            self = cur_dh
+        cur_dh = queryNextUtility(cur_dh, IDefaultHost)
+        if not cur_dh:
+            return ''
+        return self.fetch(attr, getattr(cur_dh, attr, None), cur_dh)
+
+    class path(classproperty):
+        def fget(self):
+            if self._path:
+                return self._path
+            return self.fetch('path')
+            
+        def fset(self, val):
+            self._path = val
+
+    class host(classproperty):
+        def fget(self):
+            if self._host:
+                return self._host
+            return self.fetch('host')
+        
+        def fset(self, val):
+            self._host = val
+    
 # == subscribers == #
 
 @adapter(IRedirectEvent)
@@ -110,7 +145,7 @@ def defaulting_redirection(obj, event):
         #@@ def url fuxored?
         new_url = default_url_for(default_host, obj, request, default_path=path)
         if new_url is not None:
-            set_redirect(obj, request, new_url)
+            return set_redirect(obj, request, new_url)
 
 
 # == traversers == #
@@ -219,7 +254,7 @@ class Redirector(BrowserView, Traversable):
         else:
             return rest
 
-    class redirect_url(kproperty):
+    class redirect_url(classproperty):
         def fget(self):
             return "%s/%s" %(self._url, '/'.join(self.further_path))
         def fset(self, value):
