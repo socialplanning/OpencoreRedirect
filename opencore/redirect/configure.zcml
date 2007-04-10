@@ -31,6 +31,7 @@
      />
 
   <adapter factory=".management.RedirectConfigSchemaAdapter" />
+
   <browser:page
      for="OFS.Folder.IFolder"
      class=".management.RedirectSetupForm"
