@@ -1,58 +1,39 @@
-<configure xmlns="http://namespaces.zope.org/zope"
-           xmlns:browser="http://namespaces.zope.org/browser"
-	   xmlns:opencore="http://namespaces.openplans.org/opencore"
-	   xmlns:five="http://namespaces.zope.org/five">
+======
+ todo
+======
 
-  <interface interface="opencore.redirect.interfaces.IRedirected" />
+* tests for edge cases
 
-  <subscriber handler="opencore.redirect.notify_redirect_event" />
-  <subscriber handler="opencore.redirect.explicit_redirection" />
-  <subscriber handler="opencore.redirect.defaulting_redirection" />
+<<<<<<< .mine
+* set up subscribers and extra events for vhost management
+=======
+* ask luke about the stuff other than management iface
+>>>>>>> .r4130
 
-  <adapter 
-     for=".IRedirected" 
-     provides="zope.app.traversing.interfaces.ITraverser" 
-     factory="opencore.redirect.SubitemSpoofingTraverser" 
-   />
+<<<<<<< .mine
+  - rename subscriber to update "parent" redirect info
+=======
+* set up subscribers and extra events for vhost management
+>>>>>>> .r4130
 
-  <browser:page
-     for="opencore.redirect.interfaces.IRedirected"
-     class="opencore.redirect.Redirector"
-     permission="zope.Public"
-     attribute="redirect"
-     name="opencore.redirect"
-     />
+<<<<<<< .mine
+  - rest events to update info on vhoster(crud)
+=======
+  - rename subscriber to update "parent" redirect info
+>>>>>>> .r4130
 
-  <browser:page
-     for="OFS.Folder.IFolder"
-     class=".management.RedirectSetupForm"
-     permission="zope2.ViewManagementScreens"
-     name="opencore_redirect_config" />
+<<<<<<< .mine
+* ObEv subscribers for project rename / deletion
+=======
+  - rest events to update info on vhoster(crud)
+>>>>>>> .r4130
+
+<<<<<<< .mine
+* finish defaulting and member tests
+=======
+>>>>>>> .r4130
+
+* finish defaulting and member tests
 
 
-  <utility component="opencore.redirect.global_defaulthost" />
 
-  <!-- fivish compat 2.9 bits -->
-  <five:traversable class="OFS.Application.Application" />
-  <five:traversable class="OFS.Folder.Folder" />
-
-  <include package="zope.app.annotation" />
-
-  <five:implements 
-     class="OFS.SimpleItem.SimpleItem" 
-     interface="zope.app.annotation.interfaces.IAttributeAnnotatable"
-     />
-
-  <five:implements 
-     class="OFS.Folder.Folder" 
-     interface="zope.app.annotation.interfaces.IAttributeAnnotatable"
-     />
- 
-  <!-- for development purposes only (these are the defaults
-       anyway) -->
-  <!-- opencore:defaulthost
-     host="localhost:8080" 
-     path="/"
-     / -->
-
-</configure>

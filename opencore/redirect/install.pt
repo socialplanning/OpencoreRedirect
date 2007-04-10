@@ -2,12 +2,12 @@
   <head>
   </head>
   <body>
-    <div tal:condition="view/installed">the redirect store is installed</div>
+    <div tal:condition="view/installed">the default host is installed</div>
     <div>
       <form method=POST tal:condition="not:view/installed">
 	<input type="submit" 
-	       value="Install Redirect Store" 
-	       name="install-redirectstore"
+	       value="Install Local Default Host Store" 
+	       name="install"
 	       style="border: 2px solid #F99; background-color: red"/>
       </form>
     </div>

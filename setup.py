@@ -3,6 +3,11 @@ import sys, os
 
 version = '0.2'
 
+deplinks = ["https://svn.plone.org/svn/collective/five.intid/trunk#egg=five.intid-dev",
+            "http://svn.plone.org/svn/plone/plone.fieldsets/trunk#egg=plone.fieldsets",
+            "http://svn.plone.org/svn/plone/plone.app.form/branches/plone-3.0#egg=plone.app.form",
+            ]
+
 setup(name='OpencoreRedirect',
       version=version,
       description="",
@@ -25,10 +30,10 @@ setup(name='OpencoreRedirect',
       include_package_data=True,
       zip_safe=False,
       install_requires=[
-          "five.intid==dev,>0.1"
+          "five.intid==dev,>0.1",
+          "plone.app.form",
+          "plone.fieldsets"
       ],
-      entry_points="""
-      # -*- Entry points: -*-
-      """,
-      dependency_links=["https://svn.plone.org/svn/collective/five.intid/trunk#egg=five.intid-dev"]
+      entry_points="",
+      dependency_links=deplinks
       )

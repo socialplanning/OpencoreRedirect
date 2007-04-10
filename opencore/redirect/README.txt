@@ -6,9 +6,8 @@ OpenCoreRedirect Package Readme
 Overview
 --------
 
-see spec for unit explanation of what each piece does. this doctest
-will be a functional full z3 registeration demonstration of
-how this works.
+this doctest will be a functional full z3 registeration demonstration
+of how this works.
 
 
 Main Components
@@ -177,11 +176,59 @@ Let's go through the publisher in proper now::
     Actual   URL: http://localhost/candy-mountain/index.html
     Physical URL: http://localhost/test_folder_1_/my-subproject...
 
+Defaulting traversal redirection and deactivation
+=================================================
+
+When using redirection you will want to limit the ability for non
+redirected objects to be acquired inside redirected ones. *Note*: this
+technique could interfere with certain virtual host arrangements.
+
+'deactivate' takes an optional 'disable_hook' flag
+
+    >>> redirect.deactivate(self.app, disable_hook=True)
+    >>> self.app.__before_traverse__.has_key((1, '__redirection_hook__'))
+    False
+
+Likewhise, we can activate without making redirection explicit::
+
+    >>> info = redirect.activate(self.app, explicit=False)
+    >>> redirect.IRedirected.providedBy(self.app)
+    False
+    
+    >>> self.app.__before_traverse__
+    {...(1, '__redirection_hook__'): <...AccessRule instance at ...>...}
+
+As usual, the hook fires the redirect event with the request and
+container as arguments.  A listener handles all these dispatches,
+filtering IRedirected and applying defaulting redirecting to the
+request. We'll simulate by hand::
+
+    >>> request._post_traverse=True
+    >>> event = redirect.RedirectEvent(self.app, request)
+    >>> redirect.defaulting_redirection(self.app, event)
+
+The response will reflect the redirection(along with the state we've
+applied to the request object in previous tests)::
+
+    >>> request.RESPONSE.headers.get('location')
+    'localhost:8080/sub-project/further/path'
+
+    >>> request.RESPONSE.status
+    302
+
+If we reactivate, the listener will bail out(indicated by False)::
+
+    >>> info = redirect.activate(self.app, url="http://redirected", parent=None)
+    >>> redirect.defaulting_redirection(self.app, event)
+    False
+
+    
 Traversal compliance
 ====================
 
 We also need to make sure we can get traverse normally to existing
-objects within our container::
+objects within our container. First we need to set back up our
+redirect::
 
     >>> alsoProvides(self.folder, ITestObject)
     >>> print http(r'''
@@ -192,6 +239,7 @@ objects within our container::
     Content-Type: text/html; charset=iso-8859-15...
     Actual   URL: http://localhost/test_folder_1_/index.html
     Physical URL: http://localhost/test_folder_1_...
+
 
 And to the contents of non-subredirected content::
 

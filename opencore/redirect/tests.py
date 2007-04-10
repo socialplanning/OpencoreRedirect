@@ -69,11 +69,6 @@ def test_suite():
                                       optionflags=optionflags,
                                       globs=locals())
     
-##     store = ztc.FunctionalDocFileSuite('redirect-store.txt',
-##                                        package='opencore.redirect',
-##                                        optionflags=optionflags,
-##                                        globs=locals())
-    
     suites = (readme,
               #spec,
               #store
