@@ -1,24 +1,10 @@
-"""
-a crap zmi view for activating and editing redirection 
-"""
-
 from zope.interface import Interface
 from zope.formlib import form 
 from Products.Five.formlib import formbase
-from zope import schema
-
+from interfaces import IRedirectSetup
 from opencore import redirect 
 from opencore.redirect import LOG
 import logging 
-
-
-class IRedirectSetup(Interface): 
-    
-    redirect_url = schema.TextLine(
-        title = u'Redirect URL', 
-        required = True, 
-        description = u'redirect to this url')
-
 
 
 class RedirectSetupForm(formbase.PageForm): 

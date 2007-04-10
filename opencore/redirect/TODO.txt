@@ -4,14 +4,16 @@
 
 * tests for edge cases
 
+* ask luke about the stuff other than management iface
 
-Publisher caveats to test
-=========================
+* set up subscribers and extra events for vhost management
 
-- object graph traversal vs. publication traversal
+  - rename subscriber to update "parent" redirect info
 
-- getPhysicalPathFromURL kinda isn't an actual hierarchical path
+  - rest events to update info on vhoster(crud)
 
-- 3rd party mangling of "the default page on the url": CMFDynamicFTI
+
+* finish defaulting and member tests
+
 
 

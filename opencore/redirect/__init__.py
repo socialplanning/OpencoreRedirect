@@ -3,11 +3,14 @@ from Products.Five import BrowserView
 from Products.Five.traversable import Traversable
 from memojito import memoizedproperty
 from opencore.redirect.interfaces import IRedirected, INotRedirected, \
-     IRedirectInfo
+     IRedirectInfo, IDefaultHost
+from opencore.redirect.interfaces import IRedirectEvent, RedirectEvent, HOOK_NAME
 from persistent.mapping import PersistentMapping
 from persistent import Persistent
 from zope.component import getMultiAdapter, adapts, adapter
-from zope.interface import implements, alsoProvides
+from zope.component import getUtility, handle
+from zope.interface import implements, alsoProvides, Interface
+from hook import AccessEventHook, enableAccessEventHook, disableAccessEventHook
 import urlparse 
 
 try:
@@ -30,7 +33,9 @@ import logging
 _marker = object()
 LOG = KEY = "opencore.redirect"
 RESERVED_PREFIX = "opencore_redirect"
+logger = logging.getLogger(LOG)
 
+# == annotation bag == #
 
 class RedirectInfo(PersistentMapping):
     implements(IRedirectInfo)
@@ -45,53 +50,79 @@ class RedirectInfo(PersistentMapping):
                                     self.url,
                                     super(RedirectInfo, self).__repr__())
 
+# == utility == #
 
-def get_annotation(obj, key, **kwargs):
-    ann = IAnnotations(obj)
-    notes = ann.get(key)
-    if not notes and kwargs:
-        factory = kwargs.pop('factory')
-        if not factory:
-            raise Exception("No annotation factory given")
-        ann[key] = factory(**kwargs)
-        notes = ann[key]
-    return notes
-
-
-class RedirectTraverserBase(Traverser): 
-
-    _default_traverse=Traverser.traverse
+class DefaultHost(object):
+    implements(IDefaultHost)
     
-    def should_ignore(self, ob, request): 
-        # if the object is explicitly tagged as INotRedirected 
-        # always ignore it. Also ignore if the object is 
-        # not being published. 
-        if (INotRedirected.providedBy(self.context) or 
-            not 'PARENTS' in request or  
-            not ob in request['PARENTS']): 
-            return True
+    def __init__(self, defhost='localhost:8080', defpath=''):
+        self.path = defpath
+        self.host = defhost
 
-        return False
+global_defaulthost = DefaultHost()
+
+# == subscribers == #
+
+@adapter(IRedirectEvent)
+def notify_redirect_event(event):
+    handle(event.obj, event)
+    
+@adapter(IRedirectEvent)
+def log_redirect_event(event):
+    logger.info("%s -- %s" %(event.request.getURL(), event.obj))
+
+@adapter(IRedirected, IRedirectEvent)
+def explicit_redirection(obj, event):
+    request=event.request
+    if should_ignore(obj, request):
+        raise RuntimeError("we should not be here")
+        
+    server_url = request.get('SERVER_URL')
+    redirect_server = None
+    info = get_annotation(obj, KEY)
+    if info.url: 
+        redirect_server = urlparse.urlparse(info.url)[1]
+
+    # check for external redirect
+    if (redirect_server and not server_url.find(redirect_server)>-1
+        and not RESERVED_PREFIX in request['PATH_INFO'] and 
+        not RESERVED_PREFIX in request.getURL()):
+            
+        set_redirect(obj, request, info.url)
 
 
-class SelectiveRedirectTraverser(RedirectTraverserBase):
-    """if a path matches a criterion, check agains mapping, and
-    redirect if necessary"""
-    adapts(IRedirected)
-    implements(ITraverser)
+@adapter(Interface, IRedirectEvent)
+def defaulting_redirection(obj, event):
+    if IRedirected.providedBy(obj):
+        # bail out
+        return
+    request=event.request
+    host_info = getUtility(IDefaultHost)
+    default_host = host_info.host
+    path = host_info.path
+    server_url = self.request.get('SERVER_URL')
+    if not should_ignore(obj, request) and \
+           (default_host and not server_url.startswith(default_host)):
+        
+        self.logger.info("Defaulting Redirector: redirecting request "
+                         "for %s (not under %s)" % (server_url, default_host))
+            
+        new_url = default_url_for(default_host, obj, request, default_path=path)
+        if new_url is not None:
+            set_redirect(obj, request, new_url)
 
-    debug = False
+
+# == traversers == #
+
+class SubitemSpoofingTraverser(Traverser):
     get_root = staticmethod(get_root)
-
-    @property
-    def logger(self):
-        return logging.getLogger(LOG)
+    _default_traverse = Traverser.traverse
 
     @memoizedproperty
     def info(self):
         info = get_annotation(self.context, KEY)
         return info
-
+    
     def reroute(self, path, default=_marker):
         reroute = self.info.get(path)
         if reroute:
@@ -99,90 +130,19 @@ class SelectiveRedirectTraverser(RedirectTraverserBase):
         return default
 
     def traverse(self, path, default=_marker, request=None):
-        if self.should_ignore(self.context, request): 
-            return self._default_traverse(path, default=_marker,
-                                          request=request)
-
-        server_url = request.get('SERVER_URL')
-        redirect_server = None
-        if self.info.url: 
-            redirect_server = urlparse.urlparse(self.info.url)[1]
-
-        # check for external redirect
-        if (redirect_server and not server_url.find(redirect_server)>-1
-            and not path[0].startswith(RESERVED_PREFIX) and 
-            not RESERVED_PREFIX in request.getURL()):
-            obj = getMultiAdapter((self.context, request), name=KEY)
-            obj.redirect_url = self.info.url
-            seg = path[0]
-            if seg in request['PATH_INFO']:
-                obj.path_start = seg
-            return obj
-
         # check for internal redirect
         obj = self.reroute(path[0])
         if obj is not _marker:
             return obj
 
-        # traverse normally
+        # if none found traverse normally @@ not respecting default
+        # traversal as primary might be a 'crime against nature'
         return self._default_traverse(path, default=_marker, request=request)
 
 
-class DefaultingRedirectTraverser(RedirectTraverserBase): 
-    """
-    this object is a baseclass while allows
-    redirecting objects of a type which have 
-    not had an explicit redirection url set
-    to a default url. 
-    """
-    implements(ITraverser)
 
-    DEFAULT_HOST = None
-    DEFAULT_PATH = None
 
-    def default_url_for(self, object, request):
-        """
-        """
-        default_host = self.DEFAULT_HOST
-        
-        if default_host is None: 
-            return None
-
-        default_path = self.DEFAULT_PATH or ""
-        url = default_host + '/' + default_path + '/' + object.id
-        
-        self.logger.info("Default URL for %s is %s" % (object, url))
-
-        return url
-
-    def traverse(self, path, default=_marker, request=None): 
-
-        if self.should_ignore(self.context, request): 
-            return self._default_traverse(path, default=_marker,
-                                          request=request)            
-        
-        server_url = request.get('SERVER_URL')
-
-        default_host = self.DEFAULT_HOST
-
-        if default_host and not server_url.startswith(default_host): 
-            self.logger.info("Defaulting Redirector: redirecting request "
-                             "for %s (not under %s)" % (server_url, default_host))
-            new_url = self.default_url_for(self.context, request)
-            if new_url is not None: 
-                redirector = getMultiAdapter((self.context, request), name=KEY)
-                redirector.redirect_url = new_url
-                seg = path[0]
-                if seg in request['PATH_INFO']: 
-                    redirector.path_start = seg
-                return redirector
-
-        return self._default_traverse(path, default=_marker, request=request)
-
-    @property
-    def logger(self):
-        return logging.getLogger(LOG)
-        
+# == view == #
 
 class Redirector(BrowserView, Traversable):
     """there is only zpublisher"""
@@ -206,8 +166,12 @@ class Redirector(BrowserView, Traversable):
         return list(self.context.getPhysicalPath())
 
     @property
+    def original_url(self):
+        return "%s%s" %(self.request['SERVER_URL'], self.request['PATH_INFO'])
+
+    @property
     def url_path(self):
-        return self.request.physicalPathFromURL(self.request.getURL())
+        return self.request.physicalPathFromURL(self.original_url)
 
     @property
     def further_path(self):
@@ -248,7 +212,8 @@ class Redirector(BrowserView, Traversable):
         # if 'redirect' has been placed on the url_path by traversal 
         # hackishly, don't include it. 
         if self.request._hacked_path and len(rest) > 0 and \
-               rest[-1] == 'redirect': 
+               rest[-1] == 'redirect':
+            self.logger.info("hacked path:%s")
             return rest[:-1]
         else:
             return rest
@@ -260,13 +225,8 @@ class Redirector(BrowserView, Traversable):
             self._url = value
         
     def redirect(self):
-        if getattr(self.request, "__redirected__", False):
-            return
-
-        self.request.RESPONSE.redirect(self.redirect_url)
+        self.request.RESPONSE.redirect(self.redirect_url, lock=1)
         self.logger.info("Redirected to %s" %self.redirect_url)
-            
-        self.request.__redirected__=True 
         return self.request.RESPONSE
 
     #@@ 2.10?:: def traverse( self, name, furtherPath ):
@@ -279,7 +239,23 @@ class Redirector(BrowserView, Traversable):
         return logging.getLogger(LOG)
 
 
-def apply_redirect(obj, url=None, parent=None, subprojects=None):
+# == hook functions == #
+
+class RedirectHook(AccessEventHook):
+    event = RedirectEvent
+
+
+def enableRedirectHook(obj):
+    enableAccessEventHook(obj, hook_class=RedirectHook, hook_name=HOOK_NAME)
+
+
+def disableRedirectHook(obj):
+    disableAccessEventHook(obj, HOOK_NAME)
+    
+
+# == convenience functions == #
+
+def activate(obj, url=None, parent=None, subprojects=None):
     alsoProvides(obj, IRedirected)
     info = get_annotation(obj, KEY, factory=RedirectInfo, url=url,
                           parent=parent)
@@ -291,9 +267,12 @@ def apply_redirect(obj, url=None, parent=None, subprojects=None):
         for project_name, path in subprojects:
             info[project_name] = path
     info._p_changed=1
+    enableRedirectHook(obj)
+    #@@ notify here?
     return info
 
-activate = apply_redirect
+apply_redirect = activate
+
 
 def get_redirect_url(obj):
     try:
@@ -301,16 +280,18 @@ def get_redirect_url(obj):
     except TypeError:
         return None
 
+
 def deactivate(obj):
     noLongerProvides(obj, IRedirected)
+    disableRedirectHook(obj)
+    #@@ notify here?
 
-
-def get_redirect_info(obj):
+def get_info(obj):
     if IRedirected.providedBy(obj):
         return get_annotation(obj, KEY)
     raise TypeError('Object does not provide %s' %IRedirected)
 
-get_info = get_redirect_info
+get_redirect_info = get_info
 
     
 def remove_subproject(obj, ids):
@@ -319,6 +300,13 @@ def remove_subproject(obj, ids):
     for pid in ids:
         if info.get(pid):
             del info[pid]
+            
+
+# == helpers == #
+
+def pathstr(zope_obj):
+    path = zope_obj.getPhysicalPath()
+    return '/'.join(path)
 
 
 def get_annotation(obj, key, **kwargs):
@@ -333,6 +321,34 @@ def get_annotation(obj, key, **kwargs):
     return notes
 
 
-def pathstr(zope_obj):
-    path = zope_obj.getPhysicalPath()
-    return '/'.join(path)
+def set_redirect(context, request, url, path_start=None):
+    redirector = getMultiAdapter((context, request), name=KEY)
+    redirector.redirect_url = url
+    if path_start:
+        redirector.path_start=path_start
+    redirector.redirect()
+
+
+def should_ignore(ob, request): 
+    # if the object is explicitly tagged as INotRedirected 
+    # always ignore it. Also ignore if the object is 
+    # not being published(denoted by existence of '_post_traverse').
+    publishing = hasattr(request, '_post_traverse')
+    if INotRedirected.providedBy(ob) or not publishing: 
+        return True
+    return False
+
+
+def default_url_for(default_host, object, request, default_path=""):
+    """
+    """
+    if default_host is None: 
+        return None
+
+    url = '/'.join([x for x in default_host, default_path, object.getId(), if x])
+    
+    self.logger.info("Default URL for %s is %s" % (object, url))
+
+    return url
+
+

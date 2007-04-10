@@ -16,15 +16,17 @@ Main Components
 
 We have function that setups a redirection::
 
-    >>> from opencore.redirect import apply_redirect
-    >>> apply_redirect(self.app, url="http://redirected", parent=None)
+    >>> from opencore import redirect
+    >>> redirect.activate(self.app, url="http://redirected", parent=None)
     <opencore.redirect.RedirectInfo object at ...> -> 'http://redirected' => {}
     
 We have a traversal adapter to ITraverser
 
     >>> alsoProvides(self.app, IRedirected)
     >>> ITraverser(self.app)
-    <opencore.redirect.SelectiveRedirectTraverser object at ...>
+    <opencore.redirect.SubitemSpoofingTraverser object at ...>
+
+@@ we should consider registering the spoofer to project directly
 
 We have a view on our annotation that triggers a redirection and
 consumes the rest of the subpath.
@@ -79,7 +81,8 @@ here)::
     <Products.Five.metaclass.Redirector object at ...>
 
 We will simulate the effect of the traverser and add the redirect info::
- 
+
+    >>> request._environ['PATH_INFO'] = '/sub-project/further/path'
     >>> redirector.redirect_url=info.url
     >>> redirector.redirect_url
     'http://redirected/sub-project/further/path'
@@ -96,29 +99,27 @@ view)::
     'http://redirected/sub-project/further/path'
 
 
-The Traverser
-=============
+Traversal Hooks
+===============
 
 Traversing past self.app now will redirect by returning the redirector::
-
-#    >>> set_path('', 'monkey-time')
-
-#    >>> self.app.__bobo_traverse__(request, 'monkey-time')
-    <Products.Five.metaclass.Redirector object at ...>
 
     >>> print http(r'''
     ... GET /monkey-time HTTP/1.1
     ... ''')
     HTTP/1.1 302 Moved Temporarily
-    Content-Length: 0
+    Content-Length: 738
+    Content-Type: text/html; charset=iso-8859-15
     Location: http://redirected/monkey-time...
 
+Let's try an extended path::
 
     >>> print http(r'''
     ... GET /monkey-time/and/more HTTP/1.1
     ... ''')
     HTTP/1.1 302 Moved Temporarily
-    Content-Length: 0
+    Content-Length: 738
+    Content-Type: text/html; charset=iso-8859-15
     Location: http://redirected/monkey-time/and/more...
 
 
@@ -130,6 +131,9 @@ aliases stored in the annotation's btree. This only occurs if the
 traverser sees that the request is from the redirected url::
 
     >>> request._environ['SERVER_URL'] = 'http://redirected'
+    >>> request._environ['PATH_INFO'] = '/dummy/'
+    >>> request._environ['PARENTS']=[]
+    >>> request._environ['PARENTS'].append(self.app)
 
 we'll need another folder to redirect into(basically we will hop over
 self.folder when we do this redirect and act as if our new
@@ -152,6 +156,8 @@ This could be arbitrary as long as the key is unique::
 
 A traversal should return our subproject::
 
+
+    >>> 
     >>> self.app.__bobo_traverse__(request, 'my-subproject')
     <Folder at /test_folder_1_/my-subproject>
 

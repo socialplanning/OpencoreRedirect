@@ -1,9 +1,9 @@
 <configure xmlns="http://namespaces.zope.org/meta">
-  <directives namespace="http://namespaces.zope.org/browser">
+  <directives namespace="http://namespaces.openplans.org/opencore">
     <directive
-       name="defaultredirect"
-       schema=".metadirectives.IDefaultHostDirective"
-       handler=".metaconfigure.set_default_redirect"
+       name="defaulthost"
+       schema=".meta.IDefaultHostDirective"
+       handler=".meta.configure_default_host"
      />
   </directives>
 </configure>
