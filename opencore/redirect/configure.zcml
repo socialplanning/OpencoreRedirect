@@ -1,0 +1,81 @@
+<configure xmlns="http://namespaces.zope.org/zope"
+           xmlns:browser="http://namespaces.zope.org/browser"
+	   xmlns:opencore="http://namespaces.openplans.org/opencore"
+	   xmlns:five="http://namespaces.zope.org/five">
+
+  <adapter
+      for="Products.Five.BrowserView"
+      factory="plone.app.form.default_named_template_adapter"
+      name="default"
+      provides="zope.formlib.namedtemplate.INamedTemplate"
+      />
+
+  <interface interface="opencore.redirect.interfaces.IRedirected" />
+
+  <subscriber handler="opencore.redirect.notify_redirect_event" />
+  <subscriber handler="opencore.redirect.explicit_redirection" />
+  <subscriber handler="opencore.redirect.defaulting_redirection" />
+
+  <adapter 
+     for=".IRedirected" 
+     provides="zope.app.traversing.interfaces.ITraverser" 
+     factory="opencore.redirect.SubitemSpoofingTraverser" 
+   />
+
+  <browser:page
+     for="*"
+     class="opencore.redirect.Redirector"
+     permission="zope.Public"
+     attribute="redirect"
+     name="opencore.redirect"
+     />
+
+  <adapter factory=".management.RedirectConfigSchemaAdapter" />
+
+  <browser:page
+     for="OFS.Folder.IFolder"
+     class=".management.RedirectSetupForm"
+     permission="zope2.ViewManagementScreens"
+     name="opencore_redirect_config" />
+
+  <adapter factory=".management.HostInfoSchemaAdapter" />
+  <browser:page
+     for="OFS.Folder.IFolder"
+     class=".management.HostInfoForm"
+     permission="zope2.ViewManagementScreens"
+     name="manage-defaulthost.html" />
+
+  <browser:page
+     for="OFS.interfaces.IFolder"
+     class=".management.HostInfoInstall"
+     permission="five.ManageSite"
+     template="install.pt"
+     name="install-ldh.html"
+     />
+
+  <utility component="opencore.redirect._global_host_info" />
+
+  <!-- fivish compat 2.9 bits -->
+  <five:traversable class="OFS.Application.Application" />
+  <five:traversable class="OFS.Folder.Folder" />
+
+  <include package="zope.app.annotation" />
+
+  <five:implements 
+     class="OFS.SimpleItem.SimpleItem" 
+     interface="zope.app.annotation.interfaces.IAttributeAnnotatable"
+     />
+
+  <five:implements 
+     class="OFS.Folder.Folder" 
+     interface="zope.app.annotation.interfaces.IAttributeAnnotatable"
+     />
+ 
+  <!-- for development purposes only (these are the defaults
+       anyway) -->
+  <!-- opencore:defaulthost
+     host="localhost:8080" 
+     path="/"
+     / -->
+
+</configure>

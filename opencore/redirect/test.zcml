@@ -1,0 +1,14 @@
+<configure xmlns="http://namespaces.zope.org/zope"
+           xmlns:browser="http://namespaces.zope.org/browser"
+	   xmlns:five="http://namespaces.zope.org/five">
+
+  <browser:page
+     for="opencore.redirect.interfaces.ITestObject"
+     name="index.html"
+     permission="zope.Public"
+     template="hello-world.pt"
+     />
+
+  <subscriber handler="opencore.redirect.log_redirect_event" />
+
+</configure>

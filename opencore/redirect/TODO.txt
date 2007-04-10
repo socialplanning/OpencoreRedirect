@@ -1,0 +1,19 @@
+======
+ todo
+======
+
+* tests for edge cases
+
+* set up subscribers and extra events for vhost management
+
+  - rename subscriber to update "parent" redirect info
+
+  - rest events to update info on vhoster(crud)
+
+* ObEv subscribers for project rename / deletion
+
+* finish defaulting and member tests
+
+
+
+
