@@ -24,7 +24,7 @@ class IRedirectInfo(IReadMapping, IWriteMapping):
     parent = Attribute('physical path to a parent object')
 
 
-class IDefaultHost(Interface):
+class IHostInfo(Interface):
     """utility declaratively representing the default host for an
     instance('opencore.redirect.default_host')"""
     host = TextLine(
@@ -35,6 +35,12 @@ class IDefaultHost(Interface):
     path = TextLine(
         title=u"Default Path Prefix", 
         description=u"The default path to prepend to the object path",
+        required=False
+        )
+    
+    vhost = TextLine(
+        title=u"vhost url", 
+        description=u"address to virtual hoster",
         required=False
         )
 
@@ -49,7 +55,6 @@ class RedirectEvent(object):
     def __init__(self, obj, request):
         self.obj = obj
         self.request = request
-
 
 class ITestObject(Interface):
     # @@ remove when problem gets fixed

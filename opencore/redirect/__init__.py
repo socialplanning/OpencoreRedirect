@@ -4,7 +4,7 @@ from Products.Five import BrowserView
 from Products.Five.traversable import Traversable
 from memojito import memoizedproperty
 from opencore.redirect.interfaces import IRedirected, INotRedirected, \
-     IRedirectInfo, IDefaultHost
+     IRedirectInfo, IHostInfo
 from opencore.redirect.interfaces import IRedirectEvent, RedirectEvent, HOOK_NAME
 from persistent.mapping import PersistentMapping
 from persistent import Persistent
@@ -54,17 +54,17 @@ class RedirectInfo(PersistentMapping):
 
 # == utility == #
 
-class DefaultHost(object):
-    implements(IDefaultHost)
-    
+class HostInfo(object):
+    implements(IHostInfo)
     def __init__(self, defhost='localhost:8080', defpath=''):
         self.path = defpath
         self.host = defhost
 
-global_defaulthost = DefaultHost()
+_global_host_info = HostInfo()
 
-class LocalDefaultHost(SimpleItem):
-    implements(IDefaultHost)
+
+class LocalHostInfo(SimpleItem):
+    implements(IHostInfo)
     def __init__(self, defhost='', defpath=''):
         self._path = defpath
         self._host = defhost
@@ -73,7 +73,7 @@ class LocalDefaultHost(SimpleItem):
         if val: return val
         if not cur_dh:
             self = cur_dh
-        cur_dh = queryNextUtility(cur_dh, IDefaultHost)
+        cur_dh = queryNextUtility(cur_dh, IHostInfo)
         if not cur_dh:
             return ''
         return self.fetch(attr, getattr(cur_dh, attr, None), cur_dh)
@@ -132,7 +132,7 @@ def defaulting_redirection(obj, event):
     if IRedirected.providedBy(obj):
         return False # bail out
     request=event.request
-    host_info = getUtility(IDefaultHost)
+    host_info = getUtility(IHostInfo)
     default_host = host_info.host
     path = host_info.path
     server_url = request.get('SERVER_URL')

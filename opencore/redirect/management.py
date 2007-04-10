@@ -1,5 +1,5 @@
 from OFS.Folder import Folder
-from interfaces import IRedirectSetup, IDefaultHost
+from interfaces import IRedirectSetup, IHostInfo
 from memojito import memoizedproperty
 from opencore import redirect 
 from opencore.redirect import LOG
@@ -42,18 +42,18 @@ class RedirectSetupForm(BaseForm):
     label = 'Activate Redirection' 
 
 
-class DefaultHostForm(BaseForm):
-    form_fields = form.FormFields(IDefaultHost)
+class HostInfoForm(BaseForm):
+    form_fields = form.FormFields(IHostInfo)
     label = 'Set Default Host' 
 
 
-class DefaultHostSchemaAdapter(BaseAdapter):
+class HostInfoSchemaAdapter(BaseAdapter):
     adapts(IPossibleSite)
-    implements(IDefaultHost)
+    implements(IHostInfo)
 
     @memoizedproperty
     def dh(self):
-        return getUtility(IDefaultHost)
+        return getUtility(IHostInfo)
 
     class path(classproperty):
         def fget(self):
@@ -103,7 +103,7 @@ class RedirectConfigSchemaAdapter(BaseAdapter):
                 self.info[key] = value
 
 
-class DefaultHostInstall(BrowserView):
+class HostInfoInstall(BrowserView):
     @property
     def context(self):
         return self._context[0]
@@ -116,13 +116,13 @@ class DefaultHostInstall(BrowserView):
             self.install()
 
     def install(self):
-        addUtility(self.context, IDefaultHost, redirect.LocalDefaultHost, findroot=False)
+        addUtility(self.context, IHostInfo, redirect.LocalHostInfo, findroot=False)
 
     @property
     def installed(self):
         installed = False
         try:
-            dh = getUtility(IDefaultHost)
+            dh = getUtility(IHostInfo)
             if dh and dh is not redirect.global_defaulthost:
                 installed = True
         except ComponentLookupError, e:

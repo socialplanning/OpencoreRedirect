@@ -184,8 +184,8 @@ technique could interfere with certain virtual host arrangements.
 'deactivate' takes an optional 'disable_hook' flag
 
     >>> redirect.deactivate(self.app, disable_hook=True)
-    >>> self.app.__before_traverse__
-    {}
+    >>> self.app.__before_traverse__.has_key((1, '__redirection_hook__'))
+    False
 
 Likewhise, we can activate without making redirection explicit::
 
@@ -194,7 +194,7 @@ Likewhise, we can activate without making redirection explicit::
     False
     
     >>> self.app.__before_traverse__
-    {(1, '__redirection_hook__'): <...AccessRule instance at ...>}
+    {...(1, '__redirection_hook__'): <...AccessRule instance at ...>...}
 
 As usual, the hook fires the redirect event with the request and
 container as arguments.  A listener handles all these dispatches,

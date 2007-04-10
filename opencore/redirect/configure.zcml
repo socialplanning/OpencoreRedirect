@@ -37,22 +37,22 @@
      permission="zope2.ViewManagementScreens"
      name="opencore_redirect_config" />
 
-  <adapter factory=".management.DefaultHostSchemaAdapter" />
+  <adapter factory=".management.HostInfoSchemaAdapter" />
   <browser:page
      for="OFS.Folder.IFolder"
-     class=".management.DefaultHostForm"
+     class=".management.HostInfoForm"
      permission="zope2.ViewManagementScreens"
      name="manage-defaulthost.html" />
 
   <browser:page
      for="OFS.interfaces.IFolder"
-     class=".management.DefaultHostInstall"
+     class=".management.HostInfoInstall"
      permission="five.ManageSite"
      template="install.pt"
      name="install-ldh.html"
      />
 
-  <utility component="opencore.redirect.global_defaulthost" />
+  <utility component="opencore.redirect._global_host_info" />
 
   <!-- fivish compat 2.9 bits -->
   <five:traversable class="OFS.Application.Application" />
