@@ -56,7 +56,7 @@ class RedirectInfo(PersistentMapping):
 
 class HostInfo(object):
     implements(IHostInfo)
-    def __init__(self, defhost='localhost:8080', defpath=''):
+    def __init__(self, defhost='http://localhost:8080', defpath=''):
         self.path = defpath
         self.host = defhost
 
