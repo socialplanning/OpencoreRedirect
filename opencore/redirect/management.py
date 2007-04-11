@@ -11,8 +11,9 @@ from zope.component import adapts, getUtility
 from zope.formlib import form
 from zope.interface import Interface, implements
 import logging
-from five.intid.site import addUtility
+from five.intid.site import addUtility, ComponentLookupError
 from Products.Five import BrowserView
+
 
 class BaseAdapter(object):
     def __init__(self, context):
