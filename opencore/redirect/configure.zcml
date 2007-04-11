@@ -46,7 +46,7 @@
      name="manage-defaulthost.html" />
 
   <browser:page
-     for="OFS.interfaces.IFolder"
+     for="*"
      class=".management.HostInfoInstall"
      permission="five.ManageSite"
      template="install.pt"
