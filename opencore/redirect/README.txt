@@ -209,7 +209,7 @@ The response will reflect the redirection(along with the state we've
 applied to the request object in previous tests)::
 
     >>> request.RESPONSE.headers.get('location')
-    'localhost:8080/sub-project/further/path'
+    'http://localhost:8080/sub-project/further/path'
 
     >>> request.RESPONSE.status
     302
@@ -270,10 +270,32 @@ We also want to be sure that traversal fails normally::
 We want to assure that  defaulting redirection handle unusual
 traversal cases of redirect properly::
 
-    >>> manage_addFiveTraversableFolder(self.app, 'defaulting', 'defaulting')
-    >>> defaulting = getattr(self.app, 'defaulting')
-    >>> alsoProvides(defaulting, ITestObject)
-    >>> redirect.activate(defaulting, explicit=False)
+    >>> defaulting = add_folder(self.app, 'defaulting')
+    >>> info = redirect.activate(defaulting, explicit=False)
     >>> print http(r'''
     ... GET /test_folder_1_/defaulting HTTP/1.1
     ... ''')
+    HTTP/1.1 302 Moved Temporarily
+    Content-Length: 110
+    Content-Type: text/html; charset=iso-8859-15
+    Location: http://localhost:8080/defaulting/defaulting...
+    Actual   URL: http://localhost/test_folder_1_/defaulting/index.html
+    Physical URL: http://localhost/defaulting...
+
+Sometimes folders will be nested.  We need to assure all path segments
+are preserved::
+
+    >>> redirect.deactivate(defaulting, disable_hook=True)
+    >>> ndf = add_folder(defaulting, 'nested_defaulting')
+    >>> nef = add_folder(defaulting, 'nested_explicit')
+    >>> d_info = redirect.activate(ndf, explicit=False)
+    >>> e_info = redirect.activate(nef, explicit=True)
+    >>> print http(r'''
+    ... GET /defaulting/nested_explicit/nested_defaulting HTTP/1.1
+    ... ''')
+    HTTP/1.1 302 Moved Temporarily
+    Content-Length: 110
+    Content-Type: text/html; charset=iso-8859-15
+    Location: http://localhost:8080/defaulting/defaulting...
+    Actual   URL: http://localhost/test_folder_1_/defaulting/index.html
+    Physical URL: http://localhost/defaulting/nested_defaulting...
