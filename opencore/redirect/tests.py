@@ -37,7 +37,6 @@ def readme_setup(tc):
     tc.new_request.physicalPathFromURL=returno(_ppfu, 'path')
     tc.new_request.getURL=returno(_url, 'url')
     tc.new_request._hacked_path=None
-    alsoProvides(tc.app, IAttributeAnnotatable)
     tc.log = InstalledHandler(opencore.redirect.LOG)
 
 def test_suite():
@@ -46,6 +45,7 @@ def test_suite():
     from opencore.redirect import ITraverser, get_redirect_info
     from opencore.redirect.interfaces import ITestObject
     from zope.interface import alsoProvides
+    from Products.Five.tests.testing import manage_addFiveTraversableFolder
     
     global _url
     global _ppfu
@@ -64,15 +64,12 @@ def test_suite():
                                         setUp=readme_setup,
                                         globs=locals())
     
-    spec = ztc.FunctionalDocFileSuite('spec.txt',
-                                      package='opencore.redirect',
-                                      optionflags=optionflags,
-                                      globs=locals())
+##     spec = ztc.FunctionalDocFileSuite('spec.txt',
+##                                       package='opencore.redirect',
+##                                       optionflags=optionflags,
+##                                       globs=locals())
     
-    suites = (readme,
-              #spec,
-              #store
-              )
+    suites = (readme,)
     for suite in suites:
         suite.layer = ZCMLLayer
     return unittest.TestSuite(suites)
