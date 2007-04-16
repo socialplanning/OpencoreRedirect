@@ -220,13 +220,14 @@ If we reactivate, the listener will bail out(indicated by False)::
     >>> redirect.defaulting_redirection(self.app, event)
     False
 
+
     
 Traversal compliance
 ====================
 
-We also need to make sure we can get traverse normally to existing
-objects within our container. First we need to set back up our
-redirect::
+We also need to make sure we can traverse normally to existing
+objects within our container. (we mark our folders with ITestObject to
+provide a default view)::
 
     >>> alsoProvides(self.folder, ITestObject)
     >>> print http(r'''
@@ -266,7 +267,13 @@ We also want to be sure that traversal fails normally::
     ... ''')
     HTTP/1.1 404 Not Found...
 
+We want to assure that  defaulting redirection handle unusual
+traversal cases of redirect properly::
 
-Finally, when we remove the marker, we want traversal to return to normal::
-
-    
+    >>> manage_addFiveTraversableFolder(self.app, 'defaulting', 'defaulting')
+    >>> defaulting = getattr(self.app, 'defaulting')
+    >>> alsoProvides(defaulting, ITestObject)
+    >>> redirect.activate(defaulting, explicit=False)
+    >>> print http(r'''
+    ... GET /test_folder_1_/defaulting HTTP/1.1
+    ... ''')
