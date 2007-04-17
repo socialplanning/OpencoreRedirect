@@ -45,7 +45,6 @@ def test_suite():
     from opencore.redirect import ITraverser, get_redirect_info
     from opencore.redirect.interfaces import ITestObject
     from zope.interface import alsoProvides
-    from Products.Five.tests.testing import manage_addFiveTraversableFolder
     
     global _url
     global _ppfu
