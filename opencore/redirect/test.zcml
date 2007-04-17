@@ -1,14 +1,21 @@
 <configure xmlns="http://namespaces.zope.org/zope"
            xmlns:browser="http://namespaces.zope.org/browser"
 	   xmlns:five="http://namespaces.zope.org/five">
-
+  <!-- @@ move to a testing package -->
   <browser:page
-     for="opencore.redirect.interfaces.ITestObject"
+     for="collective.testing.interfaces.ITestObject"
      name="index.html"
      permission="zope.Public"
      template="hello-world.pt"
      />
 
   <subscriber handler="opencore.redirect.log_redirect_event" />
-
+  <five:implements
+     interface = "zope.app.annotation.IAttributeAnnotatable"
+     class="OFS.Application.Application"
+     />
+  <five:implements
+     interface = "zope.app.annotation.interfaces.IAnnotatable"
+     class="OFS.Application.Application"
+     />
 </configure>
