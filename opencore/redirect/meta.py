@@ -1,6 +1,4 @@
 from zope.interface import Interface 
-from zope.configuration.fields import GlobalObject
-from zope.schema import TextLine
 from opencore.redirect import _global_host_info as host_info
 from opencore.redirect.interfaces import IHostInfo as IHostInfoDirective
 
