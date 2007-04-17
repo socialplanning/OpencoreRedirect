@@ -55,7 +55,11 @@ def test_suite():
     def add_folder(container, folder_id):
         from OFS.Folder import manage_addFolder
         manage_addFolder(container, folder_id)
-        return getattr(container, folder_id)
+        folder = getattr(container, folder_id)
+        alsoProvides(folder, ITestObject)
+        return folder
+
+
     
     readme = ztc.FunctionalDocFileSuite('README.txt',
                                         package='opencore.redirect',

@@ -15,5 +15,18 @@
 * finish defaulting and member tests
 
 
+local host
+==========
+paths
+
+
+Distinctions
+============
+
+- sub projects view pulls
+  add project vs. add subproject
+
+- check INotRedirected
+
 
 
