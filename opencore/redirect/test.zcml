@@ -1,13 +1,11 @@
 <configure xmlns="http://namespaces.zope.org/zope"
            xmlns:browser="http://namespaces.zope.org/browser"
 	   xmlns:five="http://namespaces.zope.org/five">
+
   <!-- @@ move to a testing package -->
-  <browser:page
-     for="collective.testing.interfaces.ITestObject"
-     name="index.html"
-     permission="zope.Public"
-     template="hello-world.pt"
-     />
+  <include package="collective.testing" file="browser.zcml" />
+
+  <five:defaultViewable class="OFS.Folder.Folder" />
 
   <subscriber handler="opencore.redirect.log_redirect_event" />
   <five:implements
