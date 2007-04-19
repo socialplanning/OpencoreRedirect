@@ -12,7 +12,9 @@ from zope.component import getMultiAdapter, adapts, adapter
 from zope.component import getUtility, handle
 from zope.interface import implements, alsoProvides, Interface
 from hook import AccessEventHook, enableAccessEventHook, disableAccessEventHook
-import urlparse 
+import urlparse
+
+from Acquisition import aq_inner, aq_parent
 
 try:
     from zope.interface import noLongerProvides
@@ -132,10 +134,8 @@ def defaulting_redirection(obj, event):
     if IRedirected.providedBy(obj):
         return False # bail out
     request=event.request
-    host_info = getUtility(IHostInfo)
-    default_host = host_info.host
-    path = host_info.path
     server_url = request.get('SERVER_URL')
+    default_host, path = get_host_info()
     if not should_ignore(obj, request) and \
            (default_host and not server_url.startswith(default_host)):
         
@@ -147,6 +147,9 @@ def defaulting_redirection(obj, event):
         if new_url is not None:
             return set_redirect(obj, request, new_url)
 
+def get_host_info():
+    host_info = getUtility(IHostInfo)
+    return host_info.host, host_info.path
 
 # == traversers == #
 
@@ -381,7 +384,10 @@ def default_url_for(default_host, object, request, default_path=""):
     if default_host is None: 
         return None
 
-    url = '/'.join([x for x in default_host, default_path, object.getId(), if x])
+    path = list(object.getPhysicalPath())
+    path[0] = default_host
+
+    url = '/'.join(path)
     
     logger.info("Default URL for %s is %s" % (object, url))
 

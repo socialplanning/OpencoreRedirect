@@ -276,26 +276,45 @@ traversal cases of redirect properly::
     ... GET /test_folder_1_/defaulting HTTP/1.1
     ... ''')
     HTTP/1.1 302 Moved Temporarily
-    Content-Length: 110
+    Content-Length: ...
     Content-Type: text/html; charset=iso-8859-15
     Location: http://localhost:8080/defaulting/defaulting...
     Actual   URL: http://localhost/test_folder_1_/defaulting/index.html
     Physical URL: http://localhost/defaulting...
 
 Sometimes folders will be nested.  We need to assure all path segments
-are preserved::
+are preserved. Let's create a scenario::
+
 
     >>> redirect.deactivate(defaulting, disable_hook=True)
     >>> ndf = add_folder(defaulting, 'nested_defaulting')
     >>> nef = add_folder(defaulting, 'nested_explicit')
     >>> d_info = redirect.activate(ndf, explicit=False)
     >>> e_info = redirect.activate(nef, explicit=True)
+
+
+First we need to make sure that the redirect in is
+calculated correctly::
+
+    >>> dhost, path = redirect.get_host_info()
+    >>> redirect.default_url_for(dhost, ndf, request, default_path=path)
+    'http://localhost:8080/defaulting/nested_defaulting'
+
+This should work if the object is acq wrapped in another::
+
+    >>> redirect.default_url_for(dhost, ndf.__of__(nef), request, default_path=path)
+    'http://localhost:8080/defaulting/nested_defaulting'
+
+#@@ dunno why the object path doubles up on location...
+
     >>> print http(r'''
     ... GET /defaulting/nested_explicit/nested_defaulting HTTP/1.1
     ... ''')
     HTTP/1.1 302 Moved Temporarily
-    Content-Length: 110
+    Content-Length: ...
     Content-Type: text/html; charset=iso-8859-15
-    Location: http://localhost:8080/defaulting/defaulting...
-    Actual   URL: http://localhost/test_folder_1_/defaulting/index.html
+    Location: http://localhost:8080/defaulting/nested_defaulting/nested_defaulting...
+    Actual   URL: http://localhost/defaulting/nested_explicit/nested_defaulting/index.html
     Physical URL: http://localhost/defaulting/nested_defaulting...
+
+

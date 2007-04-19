@@ -29,4 +29,8 @@ Distinctions
 - check INotRedirected
 
 
+other
+=====
+
+use classproperty egg
 
