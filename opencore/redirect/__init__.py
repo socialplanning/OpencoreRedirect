@@ -384,9 +384,9 @@ def default_url_for(default_host, object, request, default_path=""):
     if default_host is None: 
         return None
 
-    path = list(object.getPhysicalPath())
-    path[0] = default_host
-
+    host_path = request.physicalPathFromURL(default_host)
+    obj_path = list(object.getPhysicalPath())
+    path = [default_host] + obj_path[len(host_path):]
     url = '/'.join(path)
     
     logger.info("Default URL for %s is %s" % (object, url))

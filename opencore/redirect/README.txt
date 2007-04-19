@@ -292,6 +292,9 @@ are preserved. Let's create a scenario::
     >>> d_info = redirect.activate(ndf, explicit=False)
     >>> e_info = redirect.activate(nef, explicit=True)
 
+We'll wire the fake request to simulate changes in the vhosting::
+
+    >>> set_path('')
 
 First we need to make sure that the redirect in is
 calculated correctly::
@@ -299,6 +302,14 @@ calculated correctly::
     >>> dhost, path = redirect.get_host_info()
     >>> redirect.default_url_for(dhost, ndf, request, default_path=path)
     'http://localhost:8080/defaulting/nested_defaulting'
+
+This should be robust enough to deal with changes in vhosting::
+
+    >>> set_path('', 'defaulting')
+    >>> dhost, path = redirect.get_host_info()
+    >>> redirect.default_url_for(dhost, ndf, request, default_path=path)
+    'http://localhost:8080/nested_defaulting'
+    >>> set_path('')
 
 This should work if the object is acq wrapped in another::
 

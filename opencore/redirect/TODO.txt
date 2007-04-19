@@ -34,3 +34,5 @@ other
 
 use classproperty egg
 
+remove uneeded reference to path in host info
+
