@@ -151,6 +151,23 @@ def defaulting_redirection(obj, event):
         if new_url is not None:
             return set_redirect(obj, request, new_url)
 
+
+def default_url_for(default_host, object, request, default_path=""):
+    """
+    """
+    if default_host is None: 
+        return None
+
+    host_path = request.physicalPathFromURL(default_host)
+    obj_path = list(object.getPhysicalPath())
+    path = [default_host] + obj_path[len(host_path):]
+    url = '/'.join(path)
+    
+    logger.info("Default URL for %s is %s" % (object, url))
+
+    return url
+
+
 def get_host_info():
     host_info = getUtility(IHostInfo)
     return host_info.host, host_info.path
@@ -383,19 +400,6 @@ def should_ignore(ob, request):
     return False
 
 
-def default_url_for(default_host, object, request, default_path=""):
-    """
-    """
-    if default_host is None: 
-        return None
 
-    host_path = request.physicalPathFromURL(default_host)
-    obj_path = list(object.getPhysicalPath())
-    path = [default_host] + obj_path[len(host_path):]
-    url = '/'.join(path)
-    
-    logger.info("Default URL for %s is %s" % (object, url))
-
-    return url
 
 
