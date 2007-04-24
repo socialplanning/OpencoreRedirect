@@ -89,6 +89,7 @@ We will simulate the effect of the traverser and add the redirect info::
 
     >>> request._environ['PATH_INFO'] = '/sub-project/further/path'
     >>> redirector.redirect_url=info.url
+    >>> redirector.calculate_furtherpath=True
     >>> redirector.redirect_url
     'http://redirected/sub-project/further/path'
 
@@ -224,7 +225,7 @@ The response will reflect the redirection(along with the state we've
 applied to the request object in previous tests)::
 
     >>> request.RESPONSE.headers.get('location')
-    'http://localhost:8080/sub-project/further/path'
+    'http://localhost:8080'
 
     >>> request.RESPONSE.status
     302
@@ -293,7 +294,7 @@ traversal cases of redirect properly::
     HTTP/1.1 302 Moved Temporarily
     Content-Length: ...
     Content-Type: text/html; charset=iso-8859-15
-    Location: http://localhost:8080/defaulting/defaulting...
+    Location: http://localhost:8080/defaulting...
     Actual   URL: http://localhost/test_folder_1_/defaulting/index.html
     Physical URL: http://localhost/defaulting...
 
@@ -339,7 +340,7 @@ This should work if the object is acq wrapped in another::
     HTTP/1.1 302 Moved Temporarily
     Content-Length: ...
     Content-Type: text/html; charset=iso-8859-15
-    Location: http://localhost:8080/defaulting/nested_defaulting/nested_defaulting...
+    Location: http://localhost:8080/defaulting/nested_defaulting...
     Actual   URL: http://localhost/defaulting/nested_explicit/nested_defaulting/index.html
     Physical URL: http://localhost/defaulting/nested_defaulting...
 

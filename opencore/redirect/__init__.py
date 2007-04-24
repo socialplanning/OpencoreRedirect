@@ -129,7 +129,7 @@ def explicit_redirection(obj, event):
         and not RESERVED_PREFIX in request['PATH_INFO'] and 
         not RESERVED_PREFIX in request.getURL()):
             
-        set_redirect(obj, request, info.url)
+        set_redirect(obj, request, info.url, further_path=True)
 
 # @@ consider stacking event ie. make this listener before
 # redispatching
@@ -146,7 +146,6 @@ def defaulting_redirection(obj, event):
         logger.info("DF: redirecting request "
                          "for %s (not under %s)" % (server_url, default_host))
 
-        #@@ def url fuxored?
         new_url = default_url_for(default_host, obj, request, default_path=path)
         if new_url is not None:
             return set_redirect(obj, request, new_url)
@@ -215,6 +214,7 @@ class Redirector(BrowserView, Traversable):
         self.store = None
         self.subpath = []
         self.path_start = None
+        self.calculate_furtherpath=False
 
     def __of__(self, obj):
         if obj is self:
@@ -280,7 +280,9 @@ class Redirector(BrowserView, Traversable):
 
     class redirect_url(classproperty):
         def fget(self):
-            return "%s/%s" %(self._url, '/'.join(self.further_path))
+            if self.calculate_furtherpath:
+                return "%s/%s" %(self._url, '/'.join(self.further_path))
+            return self._url
         def fset(self, value):
             self._url = value
         
@@ -382,11 +384,10 @@ def get_annotation(obj, key, **kwargs):
     return notes
 
 
-def set_redirect(context, request, url, path_start=None):
+def set_redirect(context, request, url, further_path=False):
     redirector = getMultiAdapter((context, request), name=KEY)
     redirector.redirect_url = url
-    if path_start:
-        redirector.path_start=path_start
+    redirector.calculate_furtherpath=further_path
     redirector.redirect()
 
 
