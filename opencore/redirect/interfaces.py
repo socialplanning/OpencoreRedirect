@@ -44,6 +44,39 @@ class IHostInfo(Interface):
         required=False
         )
 
+# == redirect management events ==#
+
+class IRedirectManagementEvent(Interface):
+    """
+    Something is happening with the setting of redirection on an
+    object
+    """
+    obj = Attribute('object redirect is being managed for')
+    
+
+class IRedirectActivationEvent(IRedirectManagementEvent):
+    """redirect is activated"""
+
+
+class IRedirectDeactivationEvent(IRedirectManagementEvent):
+    """redirect is deactivated"""
+
+
+class RedirectManagementEvent(object):
+    implements(IRedirectManagementEvent)
+    def __init__(self, obj):
+        self.obj = obj
+
+
+class RedirectActivationEvent(RedirectManagementEvent):
+    """hello, we are activating redirection"""
+    implements(IRedirectActivationEvent)
+    
+
+class RedirectDeactivationEvent(RedirectManagementEvent):
+    implements(IRedirectDeactivationEvent)
+
+# == redirect event == #
 
 class IRedirectEvent(Interface):
     request = Attribute('current request')
@@ -55,6 +88,7 @@ class RedirectEvent(object):
     def __init__(self, obj, request):
         self.obj = obj
         self.request = request
+
 
 class ITestObject(Interface):
     # @@ remove when problem gets fixed
