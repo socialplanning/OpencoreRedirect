@@ -18,7 +18,13 @@ We have function that setups a redirection::
     >>> from opencore import redirect
     >>> redirect.activate(self.app, url="http://redirected", parent=None)
     <opencore.redirect.RedirectInfo object at ...> -> 'http://redirected' => {}
-    
+
+A redirection management event should be fired and logged::
+
+    >>> print self.log
+    opencore.redirect INFO
+      <...RedirectActivationEvent object at ...> -- <Application at >
+
 We have a traversal adapter to ITraverser
 
     >>> alsoProvides(self.app, IRedirected)
@@ -174,6 +180,8 @@ Let's go through the publisher in proper now::
     Actual   URL: http://localhost/candy-mountain/index.html
     Physical URL: http://localhost/test_folder_1_/my-subproject...
 
+
+
 Defaulting traversal redirection and deactivation
 =================================================
 
@@ -183,9 +191,16 @@ technique could interfere with certain virtual host arrangements.
 
 'deactivate' takes an optional 'disable_hook' flag
 
+    >>> self.log.clear()
     >>> redirect.deactivate(self.app, disable_hook=True)
     >>> self.app.__before_traverse__.has_key((1, '__redirection_hook__'))
     False
+
+A deactivation event should appear in our log::
+
+    >>> print self.log 
+    opencore.redirect INFO
+      <...RedirectDeactivationEvent object at ...> -- <Application at >
 
 Likewhise, we can activate without making redirection explicit::
 
@@ -327,5 +342,6 @@ This should work if the object is acq wrapped in another::
     Location: http://localhost:8080/defaulting/nested_defaulting/nested_defaulting...
     Actual   URL: http://localhost/defaulting/nested_explicit/nested_defaulting/index.html
     Physical URL: http://localhost/defaulting/nested_defaulting...
+
 
 
