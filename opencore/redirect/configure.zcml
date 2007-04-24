@@ -12,7 +12,16 @@
 
   <interface interface="opencore.redirect.interfaces.IRedirected" />
 
-  <subscriber handler="opencore.redirect.notify_redirect_event" />
+  <subscriber 
+     handler="opencore.redirect.redispatch" 
+     for="opencore.redirect.interfaces.IRedirectEvent"
+     />
+
+  <subscriber 
+     handler="opencore.redirect.redispatch" 
+     for="opencore.redirect.interfaces.IRedirectManagementEvent"
+     />
+
   <subscriber handler="opencore.redirect.explicit_redirection" />
   <subscriber handler="opencore.redirect.defaulting_redirection" />
 
