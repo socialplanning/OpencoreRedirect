@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 import sys, os
 
-version = '0.2'
+version = '0.3'
 
 deplinks = ["https://svn.plone.org/svn/collective/five.intid/trunk#egg=five.intid-dev",
             "http://svn.plone.org/svn/plone/plone.fieldsets/trunk#egg=plone.fieldsets",
