@@ -8,6 +8,7 @@
   <five:defaultViewable class="OFS.Folder.Folder" />
 
   <subscriber handler="opencore.redirect.log_redirect_event" />
+  <subscriber handler="opencore.redirect.log_redirect_management_event" />
   <five:implements
      interface = "zope.app.annotation.IAttributeAnnotatable"
      class="OFS.Application.Application"
