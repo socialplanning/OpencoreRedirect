@@ -1,37 +1,38 @@
+from Acquisition import aq_inner, aq_parent
 from BTrees.OOBTree import OOBTree
 from OFS.SimpleItem import SimpleItem
 from Products.Five import BrowserView
 from Products.Five.traversable import Traversable
+from five.intid.keyreference import get_root
+from hook import AccessEventHook, enableAccessEventHook, disableAccessEventHook
 from memojito import memoizedproperty
-from opencore.redirect.interfaces import IRedirected, INotRedirected, \
-     IRedirectInfo, IHostInfo
+from opencore.redirect.classproperty import property as classproperty
 from opencore.redirect.interfaces import IRedirectEvent, RedirectEvent, HOOK_NAME
-from persistent.mapping import PersistentMapping
+from opencore.redirect.interfaces import IRedirectInfo, IHostInfo
+from opencore.redirect.interfaces import IRedirected, INotRedirected
+from opencore.redirect.interfaces import RedirectActivationEvent, RedirectDeactivationEvent
+from opencore.redirect.interfaces import IRedirectManagementEvent
 from persistent import Persistent
+from persistent.mapping import PersistentMapping
+from zope import event
+from zope.app.component import queryNextUtility
+from zope.app.traversing.adapters import Traverser, _marker
+from zope.app.traversing.interfaces import ITraverser
 from zope.component import getMultiAdapter, adapts, adapter
 from zope.component import getUtility, handle
 from zope.interface import implements, alsoProvides, Interface
-from hook import AccessEventHook, enableAccessEventHook, disableAccessEventHook
+import logging
 import urlparse
-
-from Acquisition import aq_inner, aq_parent
 
 try:
     from zope.interface import noLongerProvides
 except ImportError:
     from Products.Five.utilities.marker import erase as noLongerProvides
-from zope.app.traversing.adapters import Traverser, _marker
-from zope.app.traversing.interfaces import ITraverser
-from five.intid.keyreference import get_root
-from opencore.redirect.classproperty import property as classproperty
-from zope.app.component import queryNextUtility
 
 try:
     from zope.annotation.interfaces import IAnnotations, IAnnotatable
 except ImportError:
     from zope.app.annotation.interfaces import IAnnotations
-
-import logging
 
 
 _marker = object()
@@ -100,13 +101,16 @@ class LocalHostInfo(SimpleItem):
     
 # == subscribers == #
 
-@adapter(IRedirectEvent)
-def notify_redirect_event(event):
+def redispatch(event):
     handle(event.obj, event)
-    
+
 @adapter(IRedirectEvent)
 def log_redirect_event(event):
     logger.info("%s -- %s" %(event.request.getURL(), event.obj))
+
+@adapter(IRedirectManagementEvent)
+def log_redirect_management_event(event):
+    logger.info("%s -- %s" %(event, event.obj))
 
 @adapter(IRedirected, IRedirectEvent)
 def explicit_redirection(obj, event):
@@ -308,7 +312,7 @@ def activate(obj, url=None, parent=None, subprojects=None, explicit=True):
             info[project_name] = path
     info._p_changed=1
     enableRedirectHook(obj)
-    #@@ notify here?
+    event.notify(RedirectActivationEvent(obj))
     return info
 
 apply_redirect = activate
@@ -325,7 +329,8 @@ def deactivate(obj, disable_hook=False):
     noLongerProvides(obj, IRedirected)
     if disable_hook:
         disableRedirectHook(obj)
-    #@@ notify here?
+    event.notify(RedirectDeactivationEvent(obj))
+
 
 def get_info(obj):
     return get_annotation(obj, KEY)
