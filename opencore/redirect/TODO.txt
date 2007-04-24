@@ -2,37 +2,7 @@
  todo
 ======
 
-* tests for edge cases
+* use classproperty egg
 
-* set up subscribers and extra events for vhost management
-
-  - rename subscriber to update "parent" redirect info
-
-  - rest events to update info on vhoster(crud)
-
-* ObEv subscribers for project rename / deletion
-
-* finish defaulting and member tests
-
-
-local host
-==========
-paths
-
-
-Distinctions
-============
-
-- sub projects view pulls
-  add project vs. add subproject
-
-- check INotRedirected
-
-
-other
-=====
-
-use classproperty egg
-
-remove uneeded reference to path in host info
+* remove uneeded reference to path in host info
 
