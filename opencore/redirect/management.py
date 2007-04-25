@@ -4,7 +4,6 @@ from memojito import memoizedproperty
 from opencore import redirect 
 from opencore.redirect import LOG
 from opencore.redirect.classproperty import property as classproperty
-from plone.app.form.validators import null_validator
 from plone.fieldsets.form import FieldsetsEditForm
 from zope.app.component.interfaces import ISite, IPossibleSite
 from zope.component import adapts, getUtility
@@ -30,7 +29,7 @@ class BaseForm(FieldsetsEditForm):
         else:
             self.status = "No changes made."
 
-    @form.action(u'Cancel', validator=null_validator)
+    @form.action(u'Cancel', validator=lambda *a: ())
     def handle_cancel_action(self, action, data):
         IStatusMessage(self.request).addStatusMessage("Changes canceled.", type="info")
         url = getMultiAdapter((self.context, self.request), name='absolute_url')()
