@@ -157,8 +157,15 @@ def default_url_for(default_host, object, request, default_path=""):
     if default_host is None: 
         return None
 
+    # phys. path to object for site root of our default host.
+    # compensates for vhostmonstering
     host_path = request.physicalPathFromURL(default_host)
+
+    # phys path to object requesting redirection
     obj_path = list(object.getPhysicalPath())
+
+    # host name / redirected path of object less the host path
+    # @@ need to check for paths on divergent hiearchies
     path = [default_host] + obj_path[len(host_path):]
     url = '/'.join(path)
     
