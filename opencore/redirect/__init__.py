@@ -165,8 +165,8 @@ def default_url_for(default_host, object, request, default_path=""):
     obj_path = list(object.getPhysicalPath())
 
     # host name / redirected path of object less the host path
-    # @@ need to check for paths on divergent hiearchies
     path = [default_host] + obj_path[len(host_path):]
+
     url = '/'.join(path)
     
     logger.info("Default URL for %s is %s" % (object, url))
