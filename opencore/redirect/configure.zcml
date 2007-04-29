@@ -18,20 +18,6 @@
   <subscriber handler="opencore.redirect.explicit_redirection" />
   <subscriber handler="opencore.redirect.defaulting_redirection" />
 
-  <adapter 
-     for=".IRedirected" 
-     provides="zope.app.traversing.interfaces.ITraverser" 
-     factory="opencore.redirect.SubitemSpoofingTraverser" 
-   />
-
-  <browser:page
-     for="*"
-     class="opencore.redirect.Redirector"
-     permission="zope.Public"
-     attribute="redirect"
-     name="opencore.redirect"
-     />
-
   <adapter factory=".management.RedirectConfigSchemaAdapter" />
 
   <browser:page
@@ -73,11 +59,10 @@
      interface="zope.app.annotation.interfaces.IAttributeAnnotatable"
      />
  
-  <!-- for development purposes only (these are the defaults
-       anyway) -->
-  <!-- opencore:defaulthost
+  <!-- for development purposes only -->
+  <!-- <opencore:defaulthost
      host="localhost:8080" 
      path="/"
-     / -->
+  /> --> 
 
 </configure>

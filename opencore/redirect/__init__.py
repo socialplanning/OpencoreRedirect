@@ -1,9 +1,5 @@
-from Acquisition import aq_inner, aq_parent
 from BTrees.OOBTree import OOBTree
 from OFS.SimpleItem import SimpleItem
-from Products.Five import BrowserView
-from Products.Five.traversable import Traversable
-from five.intid.keyreference import get_root
 from hook import AccessEventHook, enableAccessEventHook, disableAccessEventHook
 from memojito import memoizedproperty
 from opencore.redirect.classproperty import property as classproperty
@@ -96,8 +92,12 @@ class LocalHostInfo(SimpleItem):
                 return self._host
             return self.fetch('host')
         
-        def fset(self, val):
-            self._host = val
+        def fset(self, host):
+            if host and not urlparse.urlparse(host)[0]:
+                logger.warn("no scheme specified in default host '%s' assuming http" % host)
+                host = 'http://%s' % host
+
+            self._host = host
     
 # == subscribers == #
 
@@ -112,6 +112,10 @@ def log_redirect_event(event):
 def log_redirect_management_event(event):
     logger.info("%s -- %s" %(event, event.obj))
 
+def hosts_match(url1, url2):
+    return urlparse.urlparse(url1)[1] == urlparse.urlparse(url2)[1]
+
+
 @adapter(IRedirected, IRedirectEvent)
 def explicit_redirection(obj, event):
     request=event.request
@@ -121,15 +125,12 @@ def explicit_redirection(obj, event):
     server_url = request.get('SERVER_URL')
     redirect_server = None
     info = get_annotation(obj, KEY)
-    if info.url: 
-        redirect_server = urlparse.urlparse(info.url)[1]
 
     # check for external redirect
-    if (redirect_server and not server_url.find(redirect_server)>-1
+    if (info.url and not hosts_match(server_url, info.url)
         and not RESERVED_PREFIX in request['PATH_INFO'] and 
         not RESERVED_PREFIX in request.getURL()):
-            
-        set_redirect(obj, request, info.url, further_path=True)
+        do_relative_redirect(request, info.url)
 
 # @@ consider stacking event ie. make this listener before
 # redispatching
@@ -140,172 +141,62 @@ def defaulting_redirection(obj, event):
     request=event.request
     server_url = request.get('SERVER_URL')
     default_host, path = get_host_info()
-    if not should_ignore(obj, request) and \
-           (default_host and not server_url.startswith(default_host)):
+    
+    if (not should_ignore(obj, request) and 
+        (default_host and 
+         not hosts_match(server_url, default_host))):
         
         logger.info("DF: redirecting request "
-                         "for %s (not under %s)" % (server_url, default_host))
+                         "for %s (not under %s)" % (request['ACTUAL_URL'], default_host))
 
-        new_url = default_url_for(default_host, obj, request, default_path=path)
-        if new_url is not None:
-            return set_redirect(obj, request, new_url)
+        base_url = default_url_for(obj, default_host, path=path)
+        if base_url is not None:
+            return do_relative_redirect(request, base_url)
 
 
-def default_url_for(default_host, object, request, default_path=""):
+def default_url_for(object, default_host, path=""):
     """
+    returns default_host/default_path/object_id 
     """
-    if default_host is None: 
-        return None
-
-    # phys. path to object for site root of our default host.
-    # compensates for vhostmonstering
-    host_path = request.physicalPathFromURL(default_host)
-
-    # phys path to object requesting redirection
-    obj_path = list(object.getPhysicalPath())
-
-    # host name / redirected path of object less the host path
-    path = [default_host] + obj_path[len(host_path):]
-
-    url = '/'.join(path)
+    assert('://' in default_host) 
     
+    url = default_host
+    if path:
+        url = urlparse.urljoin(url, path)
+        if not url.endswith('/'):
+            url += '/'
+                    
+    url = urlparse.urljoin(url, object.id)    
     logger.info("Default URL for %s is %s" % (object, url))
-
     return url
 
+def do_relative_redirect(request, base_url):
+    """
+    redirect the remaining portion of the request
+    (the request.path stack and query args)
+    relative to base_url.
+    """
+    
+    assert('://' in base_url) 
+
+    rest = request.path[:]
+    rest.reverse()
+    rest = '/'.join(rest)
+    url = base_url
+    if not url.endswith('/'):
+        url += '/'
+    url = urlparse.urljoin(url, rest)
+
+    qs = request['QUERY_STRING']
+    if qs:
+        url += '?%s' % qs 
+
+    request.RESPONSE.redirect(url, lock=1)
+    logger.info("Set redirect location to %s" % url)
 
 def get_host_info():
     host_info = getUtility(IHostInfo)
     return host_info.host, host_info.path
-
-# == traversers == #
-
-class SubitemSpoofingTraverser(Traverser):
-    get_root = staticmethod(get_root)
-    _default_traverse = Traverser.traverse
-
-    @memoizedproperty
-    def info(self):
-        info = get_annotation(self.context, KEY)
-        return info
-    
-    def reroute(self, path, default=_marker):
-        reroute = self.info.get(path)
-        if reroute:
-            return self.get_root(self.context).restrictedTraverse(reroute)
-        return default
-
-    def traverse(self, path, default=_marker, request=None):
-        # check for internal redirect
-        obj = self.reroute(path[0])
-        if obj is not _marker:
-            return obj
-
-        # if none found traverse normally @@ not respecting default
-        # traversal as primary might be a 'crime against nature'
-        return self._default_traverse(path, default=_marker, request=request)
-
-
-
-
-# == view == #
-
-class Redirector(BrowserView, Traversable):
-    """there is only zpublisher"""
-    implements(ITraverser)
-    debug = False
-    
-    def __init__(self, context, request):
-        self.context = context
-        self.request = request
-        self.store = None
-        self.subpath = []
-        self.path_start = None
-        self.calculate_furtherpath=False
-
-    def __of__(self, obj):
-        if obj is self:
-            return self
-        return super(Redirector, self).__of__(obj)
-
-    @property
-    def context_path(self):
-        return list(self.context.getPhysicalPath())
-
-    @property
-    def original_url(self):
-        return "%s%s" %(self.request['SERVER_URL'], self.request['PATH_INFO'])
-
-    @property
-    def url_path(self):
-        return self.request.physicalPathFromURL(self.original_url)
-
-    @property
-    def further_path(self):
-        context_path = self.context_path
-        url_path = self.url_path 
-
-        cp_len = len(context_path)
-        rest = url_path[cp_len:]
-
-##         if url_path[:cp_len] != context_path: 
-##             # XXX 
-##             #
-##             # if the url_path does not start with the context_path 
-##             # the context object has not been reached using 
-##             # its physical path... 
-##             #
-##             # here we assume it has been reached by a longer 
-##             # url than its physical url by searching for 
-##             # the objects name in the remainder of the 
-##             # url_path, which is somewhat questionable
-##             # (might it not be the first instance of the name 
-##             #  in the list?) 
-##             #
-##             # we allow ValueError to be raised here if the 
-##             # object's name is not present in the remainder 
-##             # because we have no sensible choice to make 
-##             # otherwise...
-##             #
-##             # now if getPhysicalPathFromURL could actually return 
-##             # the kind of path that context.getPhysicalPath does, 
-##             # we'd be in better shape... we could simply strip 
-##             # off the prefix context_path from url_path 
-##             #
-##             ob_name = context_path[-1]
-##             ob_pos = rest.index(ob_name)
-##             rest = rest[ob_pos+1:]
-            
-        # if 'redirect' has been placed on the url_path by traversal 
-        # hackishly, don't include it. 
-        if self.request._hacked_path and len(rest) > 0 and \
-               rest[-1] == 'redirect':
-            self.logger.info("hacked path:%s")
-            return rest[:-1]
-        else:
-            return rest
-
-    class redirect_url(classproperty):
-        def fget(self):
-            if self.calculate_furtherpath:
-                return "%s/%s" %(self._url, '/'.join(self.further_path))
-            return self._url
-        def fset(self, value):
-            self._url = value
-        
-    def redirect(self):
-        self.request.RESPONSE.redirect(self.redirect_url, lock=1)
-        self.logger.info("Redirected to %s" %self.redirect_url)
-        return self.request.RESPONSE
-
-    #@@ 2.10?:: def traverse( self, name, furtherPath ):
-    def traverse(self, path, default=_marker, request=None):
-        self.subpath.append(path[0]) # necessary?
-        return self
-    
-    @property
-    def logger(self):
-        return logging.getLogger(LOG)
 
 
 # == hook functions == #
@@ -325,6 +216,11 @@ def disableRedirectHook(obj):
 # == convenience functions == #
 
 def activate(obj, url=None, parent=None, subprojects=None, explicit=True):
+
+    if url and not urlparse.urlparse(url)[0]:
+        logger.warn("no scheme specified in redirect host '%s' assuming http" % url)
+        url = 'http://%s' % url
+    
     if explicit:
         alsoProvides(obj, IRedirected)
     info = get_annotation(obj, KEY, factory=RedirectInfo, url=url,
@@ -391,23 +287,13 @@ def get_annotation(obj, key, **kwargs):
     return notes
 
 
-def set_redirect(context, request, url, further_path=False):
-    redirector = getMultiAdapter((context, request), name=KEY)
-    redirector.redirect_url = url
-    redirector.calculate_furtherpath=further_path
-    redirector.redirect()
 
 
-def should_ignore(ob, request): 
-    # if the object is explicitly tagged as INotRedirected 
-    # always ignore it. Also ignore if the object is 
+def should_ignore(ob, request):
+    # if the object is explicitly tagged as INotRedirected
+    # always ignore it. Also ignore if the object is
     # not being published(denoted by existence of '_post_traverse').
     publishing = hasattr(request, '_post_traverse')
-    if INotRedirected.providedBy(ob) or not publishing: 
+    if INotRedirected.providedBy(ob) or not publishing:
         return True
     return False
-
-
-
-
-
