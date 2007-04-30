@@ -45,10 +45,14 @@
      />
  
 
- <opencore:defaulthost
-     host="http://wannabe.seamunkey.net" 
+ <!-- <opencore:defaulthost
+     host="http://www.openplans.org" 
      ignore_path="/openplans"
-  />
+  /> --> 
+
+  <!-- <opencore:defaulthost
+         host="http://localhost:8080" />
+	 -->
 
 
 </configure>
