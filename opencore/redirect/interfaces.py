@@ -24,25 +24,12 @@ class IRedirectInfo(IReadMapping, IWriteMapping):
     parent = Attribute('physical path to a parent object')
 
 
-class IHostInfo(Interface):
-    """utility declaratively representing the default host for an
-    instance('opencore.redirect.default_host')"""
-    host = TextLine(
-        title=u"Default Host", 
-        description=u"The hostname to default to",
-        required=False)
-
-    path = TextLine(
-        title=u"Default Path Prefix", 
-        description=u"The default path to prepend to the object path",
-        required=False
-        )
+class IDefaultRedirectInfo(Interface):
     
-    vhost = TextLine(
-        title=u"vhost url", 
-        description=u"address to virtual hoster",
-        required=False
-        )
+    def default_url_for(obj):
+        """
+        return the path 
+        """
 
 # == redirect management events ==#
 
@@ -105,8 +92,11 @@ class IRedirectSetup(Interface):
         required = False, 
         description = u'redirect to this url')
 
+class IDefaultRedirectHostDirective(Interface):
+    host = TextLine(title=u'Default Host',
+                    description=u"The default host to redirect to")
 
-    
-
-
-
+    ignore_path = TextLine(title=u'Ignore Path',
+                           description=u"This path is stripped off absolute object paths",
+                           required=False)
+                    

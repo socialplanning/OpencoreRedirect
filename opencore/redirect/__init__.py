@@ -4,7 +4,7 @@ from hook import AccessEventHook, enableAccessEventHook, disableAccessEventHook
 from memojito import memoizedproperty
 from opencore.redirect.classproperty import property as classproperty
 from opencore.redirect.interfaces import IRedirectEvent, RedirectEvent, HOOK_NAME
-from opencore.redirect.interfaces import IRedirectInfo, IHostInfo
+from opencore.redirect.interfaces import IRedirectInfo, IDefaultRedirectInfo
 from opencore.redirect.interfaces import IRedirected, INotRedirected
 from opencore.redirect.interfaces import RedirectActivationEvent, RedirectDeactivationEvent
 from opencore.redirect.interfaces import IRedirectManagementEvent
@@ -94,11 +94,12 @@ class RedirectInfo(PersistentMapping):
 
 # == utility == #
 
-class HostInfo(object):
-    implements(IHostInfo)
-    def __init__(self, host='', path=''):
-        self.path = path
+class DefaultRedirectInfo(object):
+    implements(IDefaultRedirectInfo)
+    
+    def __init__(self, host='', ignore_path=''):
         self.host = host
+        self.ignore_path = ignore_path
 
     class host(classproperty):
         def fget(self):
@@ -106,41 +107,24 @@ class HostInfo(object):
         def fset(self, val):
             self._host = clean_host(val) 
 
-_global_host_info = HostInfo()
-
-
-class LocalHostInfo(SimpleItem):
-    implements(IHostInfo)
-    def __init__(self, host='', path=''):
-        self._path = path
-        self._host = clean_host(host)
-
-    def fetch(attr, val=None, cur_dh=None):
-        if val: return val
-        if not cur_dh:
-            self = cur_dh
-        cur_dh = queryNextUtility(cur_dh, IHostInfo)
-        if not cur_dh:
+    def default_url_for(self, obj):
+        if not self.host:
             return ''
-        return self.fetch(attr, getattr(cur_dh, attr, None), cur_dh)
 
-    class path(classproperty):
-        def fget(self):
-            if self._path:
-                return self._path
-            return self.fetch('path')
-            
-        def fset(self, val):
-            self._path = val
+        path = '/'.join(obj.getPhysicalPath())
 
-    class host(classproperty):
-        def fget(self):
-            if self._host:
-                return self._host
-            return self.fetch('host')
-        
-        def fset(self, host):
-            self._host = clean_host(host)
+        if self.ignore_path and path.startswith(self.ignore_path):
+            path = path[len(self.ignore_path):]
+            if not path.startswith('/'):
+                path = '/%s' % path
+
+        assert('://' in self.host)
+        url = urlparse.urljoin(self.host, path)
+
+        logger.info("Default URL for %s is %s" % (obj, url))
+        return url
+
+_global_default_redirect_info = DefaultRedirectInfo()
     
 # == subscribers == #
 
@@ -192,37 +176,22 @@ def defaulting_redirection(obj, event):
         return False # bail out
 
     server_url = request.get('SERVER_URL')
-    default_host, path = get_host_info()
-    
-    if (default_host and
-        not hosts_match(server_url, default_host)):
+
+    redir_info = getUtility(IDefaultRedirectInfo)
+    default_url = redir_info.default_url_for(obj)
+
+    if (default_url and
+        not hosts_match(server_url, default_url)):
         
         logger.debug("DF: redirecting request "
                      "for %s to %s (%s != %s)" % (request['ACTUAL_URL'],
-                                                  default_host, 
+                                                  default_url, 
                                                   extract_host(server_url),
-                                                  extract_host(default_host)))
+                                                  extract_host(default_url)))
         
-        base_url = default_url_for(obj, default_host, path=path)
-        if base_url is not None:
-            return do_relative_redirect(request, base_url)
+        return do_relative_redirect(request, default_url)
 
 
-def default_url_for(object, default_host, path=""):
-    """
-    returns default_host/default_path/object_id 
-    """
-    assert('://' in default_host) 
-    
-    url = default_host
-    if path:
-        url = urlparse.urljoin(url, path)
-        if not url.endswith('/'):
-            url += '/'
-                    
-    url = urlparse.urljoin(url, object.id)    
-    logger.debug("Default URL for %s is %s" % (object, url))
-    return url
 
 def do_relative_redirect(request, base_url):
     """
@@ -248,9 +217,6 @@ def do_relative_redirect(request, base_url):
     request.RESPONSE.redirect(url, lock=1)
     logger.info("Set redirect location to %s" % url)
 
-def get_host_info():
-    host_info = getUtility(IHostInfo)
-    return host_info.host, host_info.path
 
 
 # == hook functions == #

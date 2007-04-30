@@ -2,8 +2,9 @@
   <directives namespace="http://namespaces.openplans.org/opencore">
     <directive
        name="defaulthost"
-       schema=".meta.IHostInfoDirective"
-       handler=".meta.configure_host_info"
+       schema=".meta.IDefaultRedirectHostDirective"
+       handler=".meta.configure_default_redirect_host"
      />
   </directives>
+
 </configure>

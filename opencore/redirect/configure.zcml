@@ -26,22 +26,7 @@
      permission="zope2.ViewManagementScreens"
      name="opencore_redirect_config" />
 
-  <adapter factory=".management.HostInfoSchemaAdapter" />
-  <browser:page
-     for="OFS.Folder.IFolder"
-     class=".management.HostInfoForm"
-     permission="zope2.ViewManagementScreens"
-     name="manage-defaulthost.html" />
-
-  <browser:page
-     for="*"
-     class=".management.HostInfoInstall"
-     permission="five.ManageSite"
-     template="install.pt"
-     name="install-ldh.html"
-     />
-
-  <utility component="opencore.redirect._global_host_info" />
+  <utility component="opencore.redirect._global_default_redirect_info" />
 
   <!-- fivish compat 2.9 bits -->
   <five:traversable class="OFS.Application.Application" />
@@ -59,10 +44,11 @@
      interface="zope.app.annotation.interfaces.IAttributeAnnotatable"
      />
  
-  <!-- for development purposes only -->
-  <!-- <opencore:defaulthost
-     host="localhost:8080" 
-     path="/"
-  /> --> 
+
+ <opencore:defaulthost
+     host="http://wannabe.seamunkey.net" 
+     ignore_path="/openplans"
+  />
+
 
 </configure>
