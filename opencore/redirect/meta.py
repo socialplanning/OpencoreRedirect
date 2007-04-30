@@ -5,11 +5,6 @@ from opencore.redirect.interfaces import IHostInfo as IHostInfoDirective
 import urlparse
 
 def set_host_info(host, path):
-
-    if host and not urlparse.urlparse(host)[0]:
-        logger.warn("no scheme specified in default host '%s' assuming http" % host)
-        host = 'http://%s' % host
-
     host_info.host=host
     host_info.path=path
 

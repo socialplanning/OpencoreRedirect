@@ -128,7 +128,3 @@ class HostInfoInstall(BrowserView):
         except ComponentLookupError, e:
             pass
         return installed
-
-
-
-
