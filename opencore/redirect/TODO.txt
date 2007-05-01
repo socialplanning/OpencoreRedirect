@@ -2,16 +2,7 @@
  todo
 ======
 
-* tests for edge cases
+* use classproperty egg
 
-
-Publisher caveats to test
-=========================
-
-- object graph traversal vs. publication traversal
-
-- getPhysicalPathFromURL kinda isn't an actual hierarchical path
-
-- 3rd party mangling of "the default page on the url": CMFDynamicFTI
-
+* remove uneeded reference to path in host info
 

@@ -1,2 +1,0 @@
-<tal:_>Actual   URL: <tal:_ replace="view/request/getURL"/></tal:_>
-<tal:_>Physical URL: <tal:_ replace="view/context/absolute_url"/></tal:_>

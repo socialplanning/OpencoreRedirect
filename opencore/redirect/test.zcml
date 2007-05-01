@@ -2,12 +2,19 @@
            xmlns:browser="http://namespaces.zope.org/browser"
 	   xmlns:five="http://namespaces.zope.org/five">
 
-  <browser:page
-     for="opencore.redirect.interfaces.ITestObject"
-     name="index.html"
-     permission="zope.Public"
-     template="hello-world.pt"
+  <!-- @@ move to a testing package -->
+  <include package="collective.testing" file="browser.zcml" />
+
+  <five:defaultViewable class="OFS.Folder.Folder" />
+
+  <subscriber handler="opencore.redirect.log_redirect_event" />
+  <subscriber handler="opencore.redirect.log_redirect_management_event" />
+  <five:implements
+     interface = "zope.app.annotation.IAttributeAnnotatable"
+     class="OFS.Application.Application"
      />
-
-
+  <five:implements
+     interface = "zope.app.annotation.interfaces.IAnnotatable"
+     class="OFS.Application.Application"
+     />
 </configure>

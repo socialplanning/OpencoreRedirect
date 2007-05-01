@@ -6,9 +6,8 @@ OpenCoreRedirect Package Readme
 Overview
 --------
 
-see spec for unit explanation of what each piece does. this doctest
-will be a functional full z3 registeration demonstration of
-how this works.
+this doctest will be a functional full z3 registeration demonstration
+of how this works.
 
 
 Main Components
@@ -16,15 +15,23 @@ Main Components
 
 We have function that setups a redirection::
 
-    >>> from opencore.redirect import apply_redirect
-    >>> apply_redirect(self.app, url="http://redirected", parent=None)
+    >>> from opencore import redirect
+    >>> redirect.activate(self.app, url="http://redirected", parent=None)
     <opencore.redirect.RedirectInfo object at ...> -> 'http://redirected' => {}
-    
+
+A redirection management event should be fired and logged::
+
+    >>> print self.log
+    opencore.redirect INFO
+      <...RedirectActivationEvent object at ...> -- <Application at >
+
 We have a traversal adapter to ITraverser
 
     >>> alsoProvides(self.app, IRedirected)
     >>> ITraverser(self.app)
-    <opencore.redirect.SelectiveRedirectTraverser object at ...>
+    <opencore.redirect.SubitemSpoofingTraverser object at ...>
+
+@@ we should consider registering the spoofer to project directly
 
 We have a view on our annotation that triggers a redirection and
 consumes the rest of the subpath.
@@ -79,8 +86,10 @@ here)::
     <Products.Five.metaclass.Redirector object at ...>
 
 We will simulate the effect of the traverser and add the redirect info::
- 
+
+    >>> request._environ['PATH_INFO'] = '/sub-project/further/path'
     >>> redirector.redirect_url=info.url
+    >>> redirector.calculate_furtherpath=True
     >>> redirector.redirect_url
     'http://redirected/sub-project/further/path'
 
@@ -96,29 +105,27 @@ view)::
     'http://redirected/sub-project/further/path'
 
 
-The Traverser
-=============
+Traversal Hooks
+===============
 
 Traversing past self.app now will redirect by returning the redirector::
-
-#    >>> set_path('', 'monkey-time')
-
-#    >>> self.app.__bobo_traverse__(request, 'monkey-time')
-    <Products.Five.metaclass.Redirector object at ...>
 
     >>> print http(r'''
     ... GET /monkey-time HTTP/1.1
     ... ''')
     HTTP/1.1 302 Moved Temporarily
-    Content-Length: 0
+    Content-Length: 738
+    Content-Type: text/html; charset=iso-8859-15
     Location: http://redirected/monkey-time...
 
+Let's try an extended path::
 
     >>> print http(r'''
     ... GET /monkey-time/and/more HTTP/1.1
     ... ''')
     HTTP/1.1 302 Moved Temporarily
-    Content-Length: 0
+    Content-Length: 738
+    Content-Type: text/html; charset=iso-8859-15
     Location: http://redirected/monkey-time/and/more...
 
 
@@ -130,6 +137,9 @@ aliases stored in the annotation's btree. This only occurs if the
 traverser sees that the request is from the redirected url::
 
     >>> request._environ['SERVER_URL'] = 'http://redirected'
+    >>> request._environ['PATH_INFO'] = '/dummy/'
+    >>> request._environ['PARENTS']=[]
+    >>> request._environ['PARENTS'].append(self.app)
 
 we'll need another folder to redirect into(basically we will hop over
 self.folder when we do this redirect and act as if our new
@@ -171,11 +181,69 @@ Let's go through the publisher in proper now::
     Actual   URL: http://localhost/candy-mountain/index.html
     Physical URL: http://localhost/test_folder_1_/my-subproject...
 
+
+
+Defaulting traversal redirection and deactivation
+=================================================
+
+When using redirection you will want to limit the ability for non
+redirected objects to be acquired inside redirected ones. *Note*: this
+technique could interfere with certain virtual host arrangements.
+
+'deactivate' takes an optional 'disable_hook' flag
+
+    >>> self.log.clear()
+    >>> redirect.deactivate(self.app, disable_hook=True)
+    >>> self.app.__before_traverse__.has_key((1, '__redirection_hook__'))
+    False
+
+A deactivation event should appear in our log::
+
+    >>> print self.log 
+    opencore.redirect INFO
+      <...RedirectDeactivationEvent object at ...> -- <Application at >
+
+Likewhise, we can activate without making redirection explicit::
+
+    >>> info = redirect.activate(self.app, explicit=False)
+    >>> redirect.IRedirected.providedBy(self.app)
+    False
+    
+    >>> self.app.__before_traverse__
+    {...(1, '__redirection_hook__'): <...AccessRule instance at ...>...}
+
+As usual, the hook fires the redirect event with the request and
+container as arguments.  A listener handles all these dispatches,
+filtering IRedirected and applying defaulting redirecting to the
+request. We'll simulate by hand::
+
+    >>> request._post_traverse=True
+    >>> event = redirect.RedirectEvent(self.app, request)
+    >>> redirect.defaulting_redirection(self.app, event)
+
+The response will reflect the redirection(along with the state we've
+applied to the request object in previous tests)::
+
+    >>> request.RESPONSE.headers.get('location')
+    'http://localhost:8080'
+
+    >>> request.RESPONSE.status
+    302
+
+If we reactivate, the listener will bail out(indicated by False)::
+
+    >>> info = redirect.activate(self.app, url="http://redirected", parent=None)
+    >>> redirect.defaulting_redirection(self.app, event)
+    False
+
+
+    
 Traversal compliance
 ====================
 
-We also need to make sure we can get traverse normally to existing
-objects within our container::
+We also need to make sure we can traverse normally to existing
+objects within our container. (we mark our folders with ITestObject to
+provide a default view)::
 
     >>> alsoProvides(self.folder, ITestObject)
     >>> print http(r'''
@@ -186,6 +254,7 @@ objects within our container::
     Content-Type: text/html; charset=iso-8859-15...
     Actual   URL: http://localhost/test_folder_1_/index.html
     Physical URL: http://localhost/test_folder_1_...
+
 
 And to the contents of non-subredirected content::
 
@@ -214,7 +283,66 @@ We also want to be sure that traversal fails normally::
     ... ''')
     HTTP/1.1 404 Not Found...
 
+We want to assure that  defaulting redirection handle unusual
+traversal cases of redirect properly::
 
-Finally, when we remove the marker, we want traversal to return to normal::
+    >>> defaulting = add_folder(self.app, 'defaulting')
+    >>> info = redirect.activate(defaulting, explicit=False)
+    >>> print http(r'''
+    ... GET /test_folder_1_/defaulting HTTP/1.1
+    ... ''')
+    HTTP/1.1 302 Moved Temporarily
+    Content-Length: ...
+    Content-Type: text/html; charset=iso-8859-15
+    Location: http://localhost:8080/defaulting...
+    Actual   URL: http://localhost/test_folder_1_/defaulting/index.html
+    Physical URL: http://localhost/defaulting...
 
-    
+Sometimes folders will be nested.  We need to assure all path segments
+are preserved. Let's create a scenario::
+
+
+    >>> redirect.deactivate(defaulting, disable_hook=True)
+    >>> ndf = add_folder(defaulting, 'nested_defaulting')
+    >>> nef = add_folder(defaulting, 'nested_explicit')
+    >>> d_info = redirect.activate(ndf, explicit=False)
+    >>> e_info = redirect.activate(nef, explicit=True)
+
+We'll wire the fake request to simulate changes in the vhosting::
+
+    >>> set_path('')
+
+First we need to make sure that the redirect in is
+calculated correctly::
+
+    >>> dhost, path = redirect.get_host_info()
+    >>> redirect.default_url_for(dhost, ndf, request, default_path=path)
+    'http://localhost:8080/defaulting/nested_defaulting'
+
+This should be robust enough to deal with changes in vhosting::
+
+    >>> set_path('', 'defaulting')
+    >>> dhost, path = redirect.get_host_info()
+    >>> redirect.default_url_for(dhost, ndf, request, default_path=path)
+    'http://localhost:8080/nested_defaulting'
+    >>> set_path('')
+
+This should work if the object is acq wrapped in another::
+
+    >>> redirect.default_url_for(dhost, ndf.__of__(nef), request, default_path=path)
+    'http://localhost:8080/defaulting/nested_defaulting'
+
+#@@ dunno why the object path doubles up on location...
+
+    >>> print http(r'''
+    ... GET /defaulting/nested_explicit/nested_defaulting HTTP/1.1
+    ... ''')
+    HTTP/1.1 302 Moved Temporarily
+    Content-Length: ...
+    Content-Type: text/html; charset=iso-8859-15
+    Location: http://localhost:8080/defaulting/nested_defaulting...
+    Actual   URL: http://localhost/defaulting/nested_explicit/nested_defaulting/index.html
+    Physical URL: http://localhost/defaulting/nested_defaulting...
+
+
+
