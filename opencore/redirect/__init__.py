@@ -15,7 +15,7 @@ from zope.app.component import queryNextUtility
 from zope.app.traversing.adapters import Traverser, _marker
 from zope.app.traversing.interfaces import ITraverser
 from zope.component import getMultiAdapter, adapts, adapter
-from zope.component import getUtility, handle
+from zope.component import queryUtility, handle
 from zope.interface import implements, alsoProvides, Interface
 import logging
 import urlparse
@@ -94,7 +94,7 @@ class RedirectInfo(PersistentMapping):
 
 # == utility == #
 
-class DefaultRedirectInfo(object):
+class DefaultRedirectInfo(SimpleItem):
     implements(IDefaultRedirectInfo)
     
     def __init__(self, host='', ignore_path=''):
@@ -105,7 +105,15 @@ class DefaultRedirectInfo(object):
         def fget(self):
             return self._host
         def fset(self, val):
-            self._host = clean_host(val) 
+            self._host = clean_host(val)
+            self._p_changed = 1
+
+    class ignore_path(classproperty):
+        def fget(self):
+            return self._ignore_path
+        def fset(self, val):
+            self._ignore_path = val
+            self._p_changed = 1
 
     def default_url_for(self, obj):
         if not self.host:
@@ -124,8 +132,6 @@ class DefaultRedirectInfo(object):
         logger.info("Default URL for %s is %s" % (obj, url))
         return url
 
-_global_default_redirect_info = DefaultRedirectInfo()
-    
 # == subscribers == #
 
 def redispatch(event):
@@ -177,7 +183,10 @@ def defaulting_redirection(obj, event):
 
     server_url = request.get('SERVER_URL')
 
-    redir_info = getUtility(IDefaultRedirectInfo)
+    redir_info = queryUtility(IDefaultRedirectInfo, default=None)
+    if redir_info is None:
+        return False
+        
     default_url = redir_info.default_url_for(obj)
 
     if (default_url and

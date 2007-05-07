@@ -24,13 +24,6 @@ class IRedirectInfo(IReadMapping, IWriteMapping):
     parent = Attribute('physical path to a parent object')
 
 
-class IDefaultRedirectInfo(Interface):
-    
-    def default_url_for(obj):
-        """
-        return the path 
-        """
-
 # == redirect management events ==#
 
 class IRedirectManagementEvent(Interface):
@@ -92,11 +85,19 @@ class IRedirectSetup(Interface):
         required = False, 
         description = u'redirect to this url')
 
-class IDefaultRedirectHostDirective(Interface):
+
+                    
+class IDefaultRedirectInfoSetup(Interface):
     host = TextLine(title=u'Default Host',
                     description=u"The default host to redirect to")
 
     ignore_path = TextLine(title=u'Ignore Path',
                            description=u"This path is stripped off absolute object paths",
                            required=False)
-                    
+
+class IDefaultRedirectInfo(IDefaultRedirectInfoSetup):
+    
+    def default_url_for(obj):
+        """
+        return the path 
+        """

@@ -2,7 +2,8 @@
  todo
 ======
 
-* use classproperty egg
-
-* remove uneeded reference to path in host info
-
+A whitelist for internal RESTy access like TaskTracker 
+does (members.xml & info.xml).  eg don't redirect when the 
+host is localhost, 127.0.0.1 etc. Or some way to signal 
+via headers that no redirection is unimportant or 
+undesirable. 

@@ -15,6 +15,7 @@
      for="opencore.redirect.interfaces.IRedirectManagementEvent"
      />
 
+
   <subscriber handler="opencore.redirect.explicit_redirection" />
   <subscriber handler="opencore.redirect.defaulting_redirection" />
 
@@ -26,7 +27,19 @@
      permission="zope2.ViewManagementScreens"
      name="opencore_redirect_config" />
 
-  <utility component="opencore.redirect._global_default_redirect_info" />
+  <adapter factory=".management.DefaultRedirectInfoSchemaAdapter" />
+  <browser:page
+	for="Products.CMFPlone.Portal.PloneSite"
+	class=".management.DefaultRedirectInfoForm"
+	permission="zope2.ViewManagementScreens" 
+	name="opencore_redirect_config_default" />
+
+  <browser:page
+        for="Products.CMFPlone.Portal.PloneSite"
+        class=".management.DefaultRedirectInfoInstall"
+        permission="zope2.ViewManagementScreens"
+        template="install.pt"
+        name="opencore_redirect_install_default" />
 
   <!-- fivish compat 2.9 bits -->
   <five:traversable class="OFS.Application.Application" />
@@ -43,16 +56,5 @@
      class="OFS.Folder.Folder" 
      interface="zope.app.annotation.interfaces.IAttributeAnnotatable"
      />
- 
-
- <!-- <opencore:defaulthost
-     host="http://www.openplans.org" 
-     ignore_path="/openplans"
-  /> --> 
-
-  <!-- <opencore:defaulthost
-         host="http://localhost:8080" />
-	 -->
-
 
 </configure>
