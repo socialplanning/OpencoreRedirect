@@ -17,6 +17,7 @@ from zope.app.traversing.interfaces import ITraverser
 from zope.component import getMultiAdapter, adapts, adapter
 from zope.component import queryUtility, handle
 from zope.interface import implements, alsoProvides, Interface
+from zExceptions import Redirect
 import logging
 import urlparse
 
@@ -223,9 +224,8 @@ def do_relative_redirect(request, base_url):
     if qs:
         url += '?%s' % qs 
 
-    request.RESPONSE.redirect(url, lock=1)
-    logger.info("Set redirect location to %s" % url)
-
+    logger.info("Redirecting to %s" % url)
+    raise Redirect, url
 
 
 # == hook functions == #
