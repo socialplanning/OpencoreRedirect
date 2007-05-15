@@ -315,11 +315,6 @@ def remove_subproject(obj, ids):
 
 # == helpers == #
 
-def pathstr(zope_obj):
-    path = zope_obj.getPhysicalPath()
-    return '/'.join(path)
-
-
 def get_annotation(obj, key, **kwargs):
     ann = IAnnotations(obj)
     notes = ann.get(key)

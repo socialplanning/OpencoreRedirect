@@ -17,4 +17,5 @@
      interface = "zope.app.annotation.interfaces.IAnnotatable"
      class="OFS.Application.Application"
      />
+  <include package="zope.app.annotation" />
 </configure>

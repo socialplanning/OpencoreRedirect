@@ -1,5 +1,5 @@
 OpenCoreRedirect Package Readme
-=========================
+===============================
 
     >>> import pdb; st = pdb.set_trace
 
@@ -16,181 +16,53 @@ Main Components
 We have function that setups a redirection::
 
     >>> from opencore import redirect
-    >>> redirect.activate(self.app, url="http://redirected", parent=None)
+    >>> redirect.activate(self.app, url="http://redirected")
     <opencore.redirect.RedirectInfo object at ...> -> 'http://redirected' => {}
 
 A redirection management event should be fired and logged::
 
     >>> print self.log
-    opencore.redirect INFO
-      <...RedirectActivationEvent object at ...> -- <Application at >
-
-We have a traversal adapter to ITraverser
-
-    >>> alsoProvides(self.app, IRedirected)
-    >>> ITraverser(self.app)
-    <opencore.redirect.SubitemSpoofingTraverser object at ...>
-
-@@ we should consider registering the spoofer to project directly
-
-We have a view on our annotation that triggers a redirection and
-consumes the rest of the subpath.
-
-    >>> request = self.new_request
-    >>> info = get_redirect_info(self.app)
-    >>> getMultiAdapter((self.app, request), name='opencore.redirect')
-    <Products.Five.metaclass.Redirector object at ...>
+    opencore.redirect ...INFO
+      <...RedirectActivationEvent object at ...> -- <Application at >...
 
 
 The annotation
 ==============
 
-The info object is a BTree for storing subpath info(read, aliases) and has 2
-attributes storing the redirect info for the context itself: url and parent.
+We can retrieve the configuration that was setup 
 
+    >>> info = get_redirect_info(self.app)
     >>> info.url
     'http://redirected'
-
-Parent is unset and for meant for use with a subpath object::
-
-    >>> info.parent
-    
-We can add the default folder as a subpath like so::
-
-    >>> info['sub-project'] = '/'.join(self.folder.getPhysicalPath())
-    
-We use the physical path because later, we'll use this path to
-retrieve the subpath object.
-
-Note the change in representation for the info object::
-
-    >>> print info
-    <...> -> 'http://redirected' => {'sub-project': '/test_folder_1_'}
-
-The view
-========
-
-The view harvests the subpath as zope2.9 pushes the view through the
-rest of traversal. Note: this will change in 2.10 to use the z3
-signature of (name, furtherPath).  method (returns itself for
-publishing).  When the end of traversal is reached, the redirect
-method is called(we'll test the property used to seed the redirect
-here)::
-
-    >>> redirector = getMultiAdapter((self.app, request), name='opencore.redirect')
-    >>> redirector.path_start = 'sub-project'
-    >>> redirector.traverse(['further'], request=request)
-    <Products.Five.metaclass.Redirector object at ...>
-
-    >>> redirector.traverse(['path'], request=request)
-    <Products.Five.metaclass.Redirector object at ...>
-
-We will simulate the effect of the traverser and add the redirect info::
-
-    >>> request._environ['PATH_INFO'] = '/sub-project/further/path'
-    >>> redirector.redirect_url=info.url
-    >>> redirector.calculate_furtherpath=True
-    >>> redirector.redirect_url
-    'http://redirected/sub-project/further/path'
-
-This sets us up to do the redirect which will occur when the publisher
-calls the 'redirect' method (the attribute registered for publish this
-view)::
-
-    >>> response = redirector.redirect();
-    >>> response.status
-    302
-
-    >>> response.headers['location']
-    'http://redirected/sub-project/further/path'
 
 
 Traversal Hooks
 ===============
 
-Traversing past self.app now will redirect by returning the redirector::
+Traversing past self.app now will redirect to the url
+specified 
 
     >>> print http(r'''
-    ... GET /monkey-time HTTP/1.1
+    ... GET /test_folder_1_ HTTP/1.1
     ... ''')
-    HTTP/1.1 302 Moved Temporarily
-    Content-Length: 738
-    Content-Type: text/html; charset=iso-8859-15
-    Location: http://redirected/monkey-time...
+    HTTP/1.1 302 Moved Temporarily...
+    Location: http://redirected/test_folder_1_...
 
 Let's try an extended path::
 
     >>> print http(r'''
     ... GET /monkey-time/and/more HTTP/1.1
     ... ''')
-    HTTP/1.1 302 Moved Temporarily
-    Content-Length: 738
-    Content-Type: text/html; charset=iso-8859-15
+    HTTP/1.1 302 Moved Temporarily...
     Location: http://redirected/monkey-time/and/more...
 
 
-Internal Subpath Redirection
-============================
 
-Selective traversal does one more trick; it looks up and returns
-aliases stored in the annotation's btree. This only occurs if the
-traverser sees that the request is from the redirected url::
-
-    >>> request._environ['SERVER_URL'] = 'http://redirected'
-    >>> request._environ['PATH_INFO'] = '/dummy/'
-    >>> request._environ['PARENTS']=[]
-    >>> request._environ['PARENTS'].append(self.app)
-
-we'll need another folder to redirect into(basically we will hop over
-self.folder when we do this redirect and act as if our new
-folder is a root folder)::
-
-    >>> subproject = add_folder(self.folder, 'my-subproject')
-
-@@ test case hack to make sure index.html is available::
-
-    >>> alsoProvides(subproject, ITestObject)
-
-Then we need to inform our annotation of the redirection::
-
-    >>> info[subproject.getId()] = '/'.join(subproject.getPhysicalPath())
-
-This could be arbitrary as long as the key is unique::
-
-    >>> info['disney-land'] = '/'.join(subproject.getPhysicalPath())
-
-
-A traversal should return our subproject::
-
-    >>> self.app.__bobo_traverse__(request, 'my-subproject')
-    <Folder at /test_folder_1_/my-subproject>
-
-    >>> self.app.__bobo_traverse__(request, 'disney-land')
-    <Folder at /test_folder_1_/my-subproject>
-
-Let's go through the publisher in proper now::
-
-    >>> info.url="http://localhost"
-    >>> info['candy-mountain'] = '/'.join(subproject.getPhysicalPath())
-    >>> print http(r'''
-    ... GET /candy-mountain/index.html HTTP/1.1
-    ... ''')
-    HTTP/1.1 200 OK
-    Content-Length: 117
-    Content-Type: text/html; charset=iso-8859-15...
-    Actual   URL: http://localhost/candy-mountain/index.html
-    Physical URL: http://localhost/test_folder_1_/my-subproject...
-
-
-
-Defaulting traversal redirection and deactivation
+Deactivation 
 =================================================
 
-When using redirection you will want to limit the ability for non
-redirected objects to be acquired inside redirected ones. *Note*: this
-technique could interfere with certain virtual host arrangements.
-
-'deactivate' takes an optional 'disable_hook' flag
+To completely deactivate redirection, call deactivate with
+disable_hook=True. 
 
     >>> self.log.clear()
     >>> redirect.deactivate(self.app, disable_hook=True)
@@ -200,10 +72,13 @@ technique could interfere with certain virtual host arrangements.
 A deactivation event should appear in our log::
 
     >>> print self.log 
-    opencore.redirect INFO
-      <...RedirectDeactivationEvent object at ...> -- <Application at >
+    opencore.redirect ...INFO
+      <...RedirectDeactivationEvent object at ...> -- <Application at >...
 
-Likewhise, we can activate without making redirection explicit::
+Default Redirection
+==================================================
+
+If redirection is activated 
 
     >>> info = redirect.activate(self.app, explicit=False)
     >>> redirect.IRedirected.providedBy(self.app)
@@ -235,7 +110,6 @@ If we reactivate, the listener will bail out(indicated by False)::
     >>> info = redirect.activate(self.app, url="http://redirected", parent=None)
     >>> redirect.defaulting_redirection(self.app, event)
     False
-
 
     
 Traversal compliance
