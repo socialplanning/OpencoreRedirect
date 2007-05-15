@@ -32,7 +32,8 @@ setup(name='OpencoreRedirect',
       install_requires=[
           "five.intid==dev,>0.1",
           "plone.app.form",
-          "plone.fieldsets"
+          "plone.fieldsets",
+          "collective.testing"
       ],
       entry_points="",
       dependency_links=deplinks
