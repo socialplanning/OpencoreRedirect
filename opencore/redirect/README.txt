@@ -1,7 +1,6 @@
 OpenCoreRedirect Package Readme
 ===============================
 
-    >>> import pdb; st = pdb.set_trace
 
 Overview
 --------
@@ -39,6 +38,11 @@ We can retrieve the configuration that was setup
 Traversal Hooks
 ===============
 
+We'll try to retrieve test_folder_1_, so we mark it with
+ITestObject to provide a default view)::
+
+    >>> alsoProvides(self.folder, ITestObject)
+
 Traversing past self.app now will redirect to the url
 specified 
 
@@ -48,6 +52,16 @@ specified
     HTTP/1.1 302 Moved Temporarily...
     Location: http://redirected/test_folder_1_...
 
+The redirector determines when to redirect based on
+the Host header.  If we request the object at the
+proper URL, there is no redirection.
+
+    >>> print http(r'''
+    ... GET /test_folder_1_ HTTP/1.1
+    ... Host: redirected
+    ... ''')
+    HTTP/1.1 200 OK...
+ 
 Let's try an extended path::
 
     >>> print http(r'''
@@ -58,8 +72,77 @@ Let's try an extended path::
 
 
 
+Default Redirection
+==================================================
+
+Default redirection information can be added by providing
+a utility of type IDefaultRedirectInfo
+    >>> from zope.component import queryUtility
+    >>> from five.intid.site import addUtility
+    >>> addUtility(self.app, redirect.IDefaultRedirectInfo, redirect.DefaultRedirectInfo, findroot=False)
+    >>> default_info = queryUtility(redirect.IDefaultRedirectInfo, context=self.app, default=None)
+    >>> default_info
+    <DefaultRedirectInfo at /utilities/>
+    >>> default_info.host = 'http://default'
+
+If redirection is activated with the explicit=False flag,
+the IDefaultRedirectInfo utility is used to determine
+the redirection location. 
+
+    >>> info = redirect.activate(self.app, explicit=False)
+
+    >>> redirect.IRedirected.providedBy(self.app)
+    False
+
+    >>> self.app.__before_traverse__
+    {...(1, '__redirection_hook__'): <...AccessRule instance at ...>...}
+
+    >>> print http(r'''
+    ... GET /test_folder_1_ HTTP/1.1
+    ... ''')
+    HTTP/1.1 302 Moved Temporarily...
+    Location: http://default/test_folder_1_...
+
+Again if the host header is set to the correct host,
+no redirection is performed.
+
+    >>> print http(r'''
+    ... GET /test_folder_1_ HTTP/1.1
+    ... Host: default
+    ... ''')
+    HTTP/1.1 200 OK...
+    
+If we reactivate with a url, things behave as before:
+    >>> info = redirect.activate(self.app, url="http://redirected", parent=None)
+    >>> print http(r'''
+    ... GET /test_folder_1_ HTTP/1.1
+    ... ''')
+    HTTP/1.1 302 Moved Temporarily...
+    Location: http://redirected/test_folder_1_...
+
+    >>> print http(r'''
+    ... GET /test_folder_1_ HTTP/1.1
+    ... Host: redirected
+    ... ''')
+    HTTP/1.1 200 OK...
+
 Deactivation 
 =================================================
+
+If we deactivate without setting disable_hook to True,
+the hook will remain active and default redirection will
+apply (equivalent to activate with explicit=False)
+
+    >>> redirect.deactivate(self.app)
+    >>> self.app.__before_traverse__
+    {...(1, '__redirection_hook__'): <...AccessRule instance at ...>...}
+
+    >>> print http(r'''
+    ... GET /monkey-time/and/more HTTP/1.1
+    ... ''')
+    HTTP/1.1 302 Moved Temporarily...
+    Location: http://default/monkey-time/and/more...
+
 
 To completely deactivate redirection, call deactivate with
 disable_hook=True. 
@@ -75,51 +158,21 @@ A deactivation event should appear in our log::
     opencore.redirect ...INFO
       <...RedirectDeactivationEvent object at ...> -- <Application at >...
 
-Default Redirection
-==================================================
-
-If redirection is activated 
-
-    >>> info = redirect.activate(self.app, explicit=False)
-    >>> redirect.IRedirected.providedBy(self.app)
-    False
-    
-    >>> self.app.__before_traverse__
-    {...(1, '__redirection_hook__'): <...AccessRule instance at ...>...}
-
-As usual, the hook fires the redirect event with the request and
-container as arguments.  A listener handles all these dispatches,
-filtering IRedirected and applying defaulting redirecting to the
-request. We'll simulate by hand::
-
-    >>> request._post_traverse=True
-    >>> event = redirect.RedirectEvent(self.app, request)
-    >>> redirect.defaulting_redirection(self.app, event)
-
-The response will reflect the redirection(along with the state we've
-applied to the request object in previous tests)::
-
-    >>> request.RESPONSE.headers.get('location')
-    'http://localhost:8080'
-
-    >>> request.RESPONSE.status
-    302
-
-If we reactivate, the listener will bail out(indicated by False)::
-
-    >>> info = redirect.activate(self.app, url="http://redirected", parent=None)
-    >>> redirect.defaulting_redirection(self.app, event)
-    False
+Now no matter what the host header is it should be requestable
+as normal 
+    >>> print http(r'''
+    ... GET /test_folder_1_ HTTP/1.1
+    >>> Host: balloonmonkey
+    ... ''')
+    HTTP/1.1 200 OK...
 
     
 Traversal compliance
 ====================
 
 We also need to make sure we can traverse normally to existing
-objects within our container. (we mark our folders with ITestObject to
-provide a default view)::
+objects within our container.
 
-    >>> alsoProvides(self.folder, ITestObject)
     >>> print http(r'''
     ... GET /test_folder_1_/index.html HTTP/1.1
     ... ''')

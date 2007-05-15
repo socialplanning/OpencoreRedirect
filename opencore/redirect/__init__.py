@@ -174,6 +174,8 @@ def explicit_redirection(obj, event):
 @adapter(Interface, IRedirectEvent)
 def defaulting_redirection(obj, event):
 
+#    import pdb; pdb.set_trace()
+
     logger.debug("Checking default redirection on %s" %  obj)
     
     request=event.request
@@ -184,7 +186,8 @@ def defaulting_redirection(obj, event):
 
     server_url = request.get('SERVER_URL')
 
-    redir_info = queryUtility(IDefaultRedirectInfo, default=None)
+    redir_info = queryUtility(IDefaultRedirectInfo, 
+                              default=None, context=obj)
     if redir_info is None:
         return False
         
@@ -259,6 +262,8 @@ def activate(obj, url=None, parent=None, subprojects=None, explicit=True):
 
     if explicit:
         alsoProvides(obj, IRedirected)
+    elif IRedirected.providedBy(obj):
+	noLongerProvides(obj, IRedirected)
 
     url = clean_host(url)
 
@@ -277,6 +282,7 @@ def activate(obj, url=None, parent=None, subprojects=None, explicit=True):
             info[project_name] = path
     info._p_changed=1
     enableRedirectHook(obj)
+
     event.notify(RedirectActivationEvent(obj))
     return info
 
