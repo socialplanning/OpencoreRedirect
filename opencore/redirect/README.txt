@@ -113,7 +113,7 @@ no redirection is performed.
     HTTP/1.1 200 OK...
     
 If we reactivate with a url, things behave as before:
-    >>> info = redirect.activate(self.app, url="http://redirected", parent=None)
+    >>> info = redirect.activate(self.app, url="http://redirected")
     >>> print http(r'''
     ... GET /test_folder_1_ HTTP/1.1
     ... ''')
@@ -162,68 +162,28 @@ Now no matter what the host header is it should be requestable
 as normal 
     >>> print http(r'''
     ... GET /test_folder_1_ HTTP/1.1
-    >>> Host: balloonmonkey
+    ... Host: balloonmonkey
     ... ''')
-    HTTP/1.1 200 OK...
+    HTTP/1.1 200...
 
-    
 Traversal compliance
 ====================
 
-We also need to make sure we can traverse normally to existing
-objects within our container.
+Activating redirection again,
 
-    >>> print http(r'''
-    ... GET /test_folder_1_/index.html HTTP/1.1
-    ... ''')
-    HTTP/1.1 200 OK
-    Content-Length: 103
-    Content-Type: text/html; charset=iso-8859-15...
-    Actual   URL: http://localhost/test_folder_1_/index.html
-    Physical URL: http://localhost/test_folder_1_...
+    >>> info = redirect.activate(self.app, url="http://redirected")
 
-
-And to the contents of non-subredirected content::
-
-    >>> print http(r'''
-    ... GET /test_folder_1_/my-subproject HTTP/1.1
-    ... ''')
-    HTTP/1.1 200 OK...
-    Actual   URL: http://localhost/test_folder_1_/my-subproject/index.html
-    Physical URL: http://localhost/test_folder_1_/my-subproject...
-
-
-We also want to be sure that traversal fails normally::
-
-    >>> print http(r'''
-    ... GET /nothinghere HTTP/1.1
-    ... ''')
-    HTTP/1.1 404 Not Found...
-
-    >>> print http(r'''
-    ... GET /candy-mountain/nothinghere HTTP/1.1
-    ... ''')
-    HTTP/1.1 404 Not Found...
-
-    >>> print http(r'''
-    ... GET /candy-mountain/nothinghere HTTP/1.1
-    ... ''')
-    HTTP/1.1 404 Not Found...
-
-We want to assure that  defaulting redirection handle unusual
-traversal cases of redirect properly::
+We want to assure that  defaulting redirection occurs when 
+the object is acquired through a redirected object::
 
     >>> defaulting = add_folder(self.app, 'defaulting')
     >>> info = redirect.activate(defaulting, explicit=False)
     >>> print http(r'''
     ... GET /test_folder_1_/defaulting HTTP/1.1
+    ... Host: redirected
     ... ''')
-    HTTP/1.1 302 Moved Temporarily
-    Content-Length: ...
-    Content-Type: text/html; charset=iso-8859-15
-    Location: http://localhost:8080/defaulting...
-    Actual   URL: http://localhost/test_folder_1_/defaulting/index.html
-    Physical URL: http://localhost/defaulting...
+    HTTP/1.1 302 Moved Temporarily...
+    Location: http://default/defaulting...
 
 Sometimes folders will be nested.  We need to assure all path segments
 are preserved. Let's create a scenario::
@@ -244,32 +204,25 @@ calculated correctly::
 
     >>> dhost, path = redirect.get_host_info()
     >>> redirect.default_url_for(dhost, ndf, request, default_path=path)
-    'http://localhost:8080/defaulting/nested_defaulting'
+    'http://default/defaulting/nested_defaulting'
 
 This should be robust enough to deal with changes in vhosting::
 
     >>> set_path('', 'defaulting')
     >>> dhost, path = redirect.get_host_info()
     >>> redirect.default_url_for(dhost, ndf, request, default_path=path)
-    'http://localhost:8080/nested_defaulting'
+    'http://default/nested_defaulting'
     >>> set_path('')
 
 This should work if the object is acq wrapped in another::
 
     >>> redirect.default_url_for(dhost, ndf.__of__(nef), request, default_path=path)
-    'http://localhost:8080/defaulting/nested_defaulting'
+    'http://default/defaulting/nested_defaulting'
 
 #@@ dunno why the object path doubles up on location...
 
     >>> print http(r'''
     ... GET /defaulting/nested_explicit/nested_defaulting HTTP/1.1
     ... ''')
-    HTTP/1.1 302 Moved Temporarily
-    Content-Length: ...
-    Content-Type: text/html; charset=iso-8859-15
-    Location: http://localhost:8080/defaulting/nested_defaulting...
-    Actual   URL: http://localhost/defaulting/nested_explicit/nested_defaulting/index.html
-    Physical URL: http://localhost/defaulting/nested_defaulting...
-
-
-
+    HTTP/1.1 302 Moved Temporarily...
+    Location: http://default/defaulting/nested_defaulting...
