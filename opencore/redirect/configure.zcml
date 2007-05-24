@@ -16,8 +16,7 @@
      />
 
 
-  <subscriber handler="opencore.redirect.explicit_redirection" />
-  <subscriber handler="opencore.redirect.defaulting_redirection" />
+  <subscriber handler="opencore.redirect.trigger_redirection" />
 
   <adapter factory=".management.RedirectConfigSchemaAdapter" />
 

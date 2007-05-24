@@ -5,7 +5,7 @@ from memojito import memoizedproperty
 from opencore.redirect.classproperty import property as classproperty
 from opencore.redirect.interfaces import IRedirectEvent, RedirectEvent, HOOK_NAME
 from opencore.redirect.interfaces import IRedirectInfo, IDefaultRedirectInfo
-from opencore.redirect.interfaces import IRedirected, INotRedirected
+from opencore.redirect.interfaces import IRedirected
 from opencore.redirect.interfaces import RedirectActivationEvent, RedirectDeactivationEvent
 from opencore.redirect.interfaces import IRedirectManagementEvent
 from persistent import Persistent
@@ -33,7 +33,7 @@ except ImportError:
 
 
 _marker = object()
-LOG = KEY = "opencore.redirect"
+LOG = REDIRECT_ANNOTATION = "opencore.redirect"
 RESERVED_PREFIX = "opencore_redirect"
 logger = logging.getLogger(LOG)
 
@@ -148,63 +148,31 @@ def log_redirect_management_event(event):
 
 
 @adapter(IRedirected, IRedirectEvent)
-def explicit_redirection(obj, event):
-    logger.debug("Checking explicit redirection on %s" %  obj)
+def trigger_redirection(obj, event):
+    logger.debug("Checking redirection on %s" %  obj)
 
     request=event.request
     if should_ignore(obj, request):
         return 
         
     server_url = request.get('SERVER_URL')
-    redirect_server = None
-    info = get_annotation(obj, KEY)
-    redir_url = info.url
-
-    # check for external redirect
-    if redir_url and not hosts_match(server_url, redir_url):
-        logger.debug("EX: redirecting request "
-                     "for %s to %s (%s != %s)" % (request['ACTUAL_URL'],
-                                                  redir_url, 
-                                                  extract_host(server_url),
-                                                  extract_host(redir_url)))
-        do_relative_redirect(request, redir_url)
-
-# @@ consider stacking event ie. make this listener before
-# redispatching
-@adapter(Interface, IRedirectEvent)
-def defaulting_redirection(obj, event):
-
-#    import pdb; pdb.set_trace()
-
-    logger.debug("Checking default redirection on %s" %  obj)
     
-    request=event.request
-    
-    if (IRedirected.providedBy(obj) or
-        should_ignore(obj, request)):
-        return False # bail out
+    base_url = get_annotation(obj,REDIRECT_ANNOTATION).url
 
-    server_url = request.get('SERVER_URL')
+    if not base_url:
+        # no specific url, try default
+        default_info = queryUtility(IDefaultRedirectInfo, 
+                                    default=None, context=obj)
+        if default_info is not None:
+            base_url = default_info.default_url_for(obj)
 
-    redir_info = queryUtility(IDefaultRedirectInfo, 
-                              default=None, context=obj)
-    if redir_info is None:
-        return False
-        
-    default_url = redir_info.default_url_for(obj)
-
-    if (default_url and
-        not hosts_match(server_url, default_url)):
-        
-        logger.debug("DF: redirecting request "
+    if base_url and not hosts_match(server_url, base_url):
+        logger.debug("redirecting request "
                      "for %s to %s (%s != %s)" % (request['ACTUAL_URL'],
-                                                  default_url, 
+                                                  base_url, 
                                                   extract_host(server_url),
-                                                  extract_host(default_url)))
-        
-        return do_relative_redirect(request, default_url)
-
-
+                                                  extract_host(base_url)))
+        do_relative_redirect(request, base_url)
 
 def do_relative_redirect(request, base_url):
     """
@@ -258,29 +226,17 @@ def disableRedirectHook(obj):
 
 # == convenience functions == #
 
-def activate(obj, url=None, parent=None, subprojects=None, explicit=True):
-
-    if explicit:
-        alsoProvides(obj, IRedirected)
-    elif IRedirected.providedBy(obj):
-	noLongerProvides(obj, IRedirected)
-
+def activate(obj, url=None):
+    
+    alsoProvides(obj, IRedirected)
     url = clean_host(url)
 
-    logger.info("Activating redirection on %s, url=%s, explicit=%s" %
-                (obj, url, explicit))
+    logger.info("Activating redirection on %s, url=%s" %
+                (obj, url))
     
-    info = get_annotation(obj, KEY, factory=RedirectInfo, url=url,
-                          parent=parent)
+    info = get_annotation(obj, REDIRECT_ANNOTATION, factory=RedirectInfo, url=url)
 
-
-    info.url = url    
-    info.parent = parent
-    
-    if subprojects:
-        for project_name, path in subprojects:
-            info[project_name] = path
-    info._p_changed=1
+    info.url = url
     enableRedirectHook(obj)
 
     event.notify(RedirectActivationEvent(obj))
@@ -296,29 +252,18 @@ def get_redirect_url(obj):
         return None
 
 
-def deactivate(obj, disable_hook=False):
-    logger.info("Deactivating redirection on %s, disable_hook=%s" %
-                (obj, disable_hook))
+def deactivate(obj):
+    logger.info("Deactivating redirection on %s" %
+                obj)
     noLongerProvides(obj, IRedirected)
-    if disable_hook:
-        disableRedirectHook(obj)
+    disableRedirectHook(obj)
     event.notify(RedirectDeactivationEvent(obj))
 
 
 def get_info(obj):
-    return get_annotation(obj, KEY)
-
-get_redirect_info = get_info
+    return get_annotation(obj, REDIRECT_ANNOTATION)
 
     
-def remove_subproject(obj, ids):
-    info= get_annotation(obj, KEY, factory=RedirectInfo, url=url,
-                         parent=parent)
-    for pid in ids:
-        if info.get(pid):
-            del info[pid]
-            
-
 # == helpers == #
 
 def get_annotation(obj, key, **kwargs):
@@ -338,7 +283,7 @@ def should_ignore(ob, request):
     # always ignore it. Also ignore if the object is
     # not being published(denoted by existence of '_post_traverse').
     publishing = hasattr(request, '_post_traverse')
-    if (INotRedirected.providedBy(ob) or
+    if (not IRedirected.providedBy(ob) or
         not publishing or
         RESERVED_PREFIX in request['PATH_INFO'] or 
         RESERVED_PREFIX in request.getURL()):
