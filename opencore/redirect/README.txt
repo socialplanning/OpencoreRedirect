@@ -5,24 +5,26 @@ OpenCoreRedirect Package Readme
 Overview
 --------
 
-this doctest will be a functional full z3 registeration demonstration
+this doctest will be a functional full z3 registration demonstration
 of how this works.
 
 
 Main Components
 ===============
 
-We have function that setups a redirection::
+We have function that sets up a redirection::
 
     >>> from opencore import redirect
-    >>> from opencore.redirect import get_redirect_info
     >>> redirect.activate(self.app, url="http://redirected")
     <opencore.redirect.RedirectInfo object at ...> -> 'http://redirected' => {}
+
+This sets up a pre-traversal hook on the object:
 
     >>> self.app.__before_traverse__
     {...(1, '__redirection_hook__'): <...AccessRule instance at ...>...}
 
-A redirection management event should be fired and logged::
+A redirection management event is fired whenever redirection is
+setup or changed:
 
     >>> print self.log
     opencore.redirect ...INFO
@@ -32,8 +34,9 @@ A redirection management event should be fired and logged::
 The annotation
 ==============
 
-We can retrieve the configuration that was setup 
+We can retrieve the configuration that was setup using get_redirect_info 
 
+    >>> from opencore.redirect import get_redirect_info
     >>> info = get_redirect_info(self.app)
     >>> info.url
     'http://redirected'
@@ -49,7 +52,6 @@ ITestObject to provide a default view)::
 
 Traversing past self.app now will redirect to the url
 specified 
-
    
     >>> print http(r'''
     ... GET /test_folder_1_ HTTP/1.1
@@ -57,16 +59,6 @@ specified
     HTTP/1.1 302 Moved Temporarily...
     Location: http://redirected/test_folder_1_...
 
-The redirector determines when to redirect based on
-the Host header.  If we request the object at the
-proper URL, there is no redirection.
-
-    >>> print http(r'''
-    ... GET /test_folder_1_ HTTP/1.1
-    ... Host: redirected
-    ... ''')
-    HTTP/1.1 200 OK...
- 
 Let's try an extended path::
 
     >>> print http(r'''
@@ -76,29 +68,53 @@ Let's try an extended path::
     Location: http://redirected/monkey-time/and/more...
 
 
+The redirector determines when to redirect based on
+the Host header.  If we request the object with the
+proper Host header set, there is no redirection.
+
+    >>> print http(r'''
+    ... GET /test_folder_1_ HTTP/1.1
+    ... Host: redirected
+    ... ''')
+    HTTP/1.1 200 OK...
+ 
+
+
 
 Default Redirection
 ==================================================
 
-Default redirection information can be added by providing
-a utility of type IDefaultRedirectInfo
-    >>> from zope.component import queryUtility
+A global default for redirection can be added by providing
+a utility of type IDefaultRedirectInfo. 
+
     >>> from five.intid.site import addUtility
     >>> from opencore.redirect import DefaultRedirectInfo
     >>> addUtility(self.app, redirect.IDefaultRedirectInfo, redirect.DefaultRedirectInfo, findroot=False)
+
+It can be retrieved using queryUtility
+
+    >>> from zope.component import queryUtility
     >>> default_info = queryUtility(redirect.IDefaultRedirectInfo, context=self.app, default=None)
     >>> default_info
     <DefaultRedirectInfo at /utilities/>
-    >>> default_info.host = 'http://default'
 
-If redirection is activated with no url,
+It can be configured similarly to the RedirectInfo::
+
+    >>> default_info.url = 'http://default'
+
+If redirection is activated with no url specified,
 the IDefaultRedirectInfo utility is used to determine
-the redirection location. 
+the redirection location.
 
     >>> info = redirect.activate(self.app)
 
+The hook will still be setup:
+
     >>> self.app.__before_traverse__
     {...(1, '__redirection_hook__'): <...AccessRule instance at ...>...}
+
+But now when we visit the test folder, we'll be redirected to
+the default host:
 
     >>> print http(r'''
     ... GET /test_folder_1_ HTTP/1.1
@@ -116,6 +132,7 @@ no redirection is performed.
     HTTP/1.1 200 OK...
     
 If we reactivate with a url, things behave as before:
+
     >>> info = redirect.activate(self.app, url="http://redirected")
     >>> print http(r'''
     ... GET /test_folder_1_ HTTP/1.1
@@ -131,6 +148,9 @@ If we reactivate with a url, things behave as before:
 
 Deactivation 
 =================================================
+
+To stop redirection on an object, use deactivate.  This
+will remove the hook. 
 
     >>> redirect.deactivate(self.app)
     >>> self.app.__before_traverse__.has_key((1, '__redirection_hook__'))
@@ -158,7 +178,7 @@ Activating redirection again,
     >>> info = redirect.activate(self.app, url="http://redirected")
 
 We want to assure that  defaulting redirection occurs when 
-the object is acquired through a redirected object::
+the object is acquired through an explicitly redirected object::
 
     >>> defaulting = add_folder(self.app, 'defaulting')
     >>> info = redirect.activate(defaulting)
@@ -170,43 +190,48 @@ the object is acquired through a redirected object::
     Location: http://default/defaulting...
 
 Sometimes folders will be nested.  We need to assure all path segments
-are preserved. Let's create a scenario::
+are preserved. Let's create a scenario.  First, a parent folder with no
+redirection:
 
+    >>> par = add_folder(self.app, 'parent_folder')
 
-    >>> redirect.deactivate(defaulting)
-    >>> ndf = add_folder(defaulting, 'nested_defaulting')
-    >>> nef = add_folder(defaulting, 'nested_explicit')
-    >>> d_info = redirect.activate(ndf)
-    >>> e_info = redirect.activate(nef, url='http://redirected/')
+Now, two child folders, one with default redirection, one with
+explicit redirection.
 
-We'll wire the fake request to simulate changes in the vhosting
-First we need to make sure that the redirect in is
+    >>> ndefault = add_folder(par, 'ndefault')
+    >>> d_info = redirect.activate(ndefault)
+
+    >>> nexplicit = add_folder(par, 'nexplicit')
+    >>> e_info = redirect.activate(nexplicit, url='http://redirected/')
+
+First we need to make sure that the default redirect url is
 calculated correctly::
 
-    >>> from opencore.redirect.interfaces import IDefaultRedirectInfo
-    >>> dhi = queryUtility(IDefaultRedirectInfo,
-    ...                    default=None, context=self.app)
-    >>> dhi is not None
-    True
-    >>> dhi.default_url_for(ndf)
-    'http://default/defaulting/nested_defaulting'
-    
-    >>> dhi.ignore_path = '/defaulting'
-    >>> dhi.default_url_for(ndf)
-    'http://default/nested_defaulting'
-    >>> dhi.ignore_path = ''
+    >>> default_info.default_url_for(ndefault)
+    'http://default/parent_folder/ndefault'
 
 This should work if the object is acq wrapped in another::
 
-    >>> dhi.default_url_for(ndf.__of__(nef))
-    'http://default/defaulting/nested_defaulting'
+    >>> default_info.default_url_for(ndefault.__of__(nexplicit))
+    'http://default/parent_folder/ndefault'
 
-
+If we request the default redirected object at the redirected
+host, we should wind up at the default host:
 
     >>> print http(r'''
-    ... GET /defaulting/nested_explicit/nested_defaulting HTTP/1.1
+    ... GET /parent_folder/nexplicit/ndefault HTTP/1.1
     ... Host: redirected
     ... ''')
     HTTP/1.1 302 Moved Temporarily...
-    Location: http://default/defaulting/nested_defaulting...
+    Location: http://default/parent_folder/ndefault...
+
+
+The DefaultHostInfo may also be configured with an 'ignore path'.
+This is similar to a virtual host root. When redirecting, this
+path will be eliminated from the path to the object, eg we
+can eliminate 'parent_folder' from the path to ndefault. 
+
+    >>> default_info.ignore_path = '/parent_folder'
+    >>> default_info.default_url_for(ndefault)
+    'http://default/ndefault'
 

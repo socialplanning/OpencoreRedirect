@@ -90,15 +90,15 @@ class RedirectInfo(PersistentMapping):
 class DefaultRedirectInfo(SimpleItem):
     implements(IDefaultRedirectInfo)
     
-    def __init__(self, host='', ignore_path=''):
-        self.host = host
+    def __init__(self, url='', ignore_path=''):
+        self.url = url
         self.ignore_path = ignore_path
 
-    class host(classproperty):
+    class url(classproperty):
         def fget(self):
-            return self._host
+            return self._url
         def fset(self, val):
-            self._host = _clean_host(val)
+            self._url = _clean_host(val)
             self._p_changed = 1
 
     class ignore_path(classproperty):
@@ -109,7 +109,7 @@ class DefaultRedirectInfo(SimpleItem):
             self._p_changed = 1
 
     def default_url_for(self, obj):
-        if not self.host:
+        if not self.url:
             return ''
 
         path = '/'.join(obj.getPhysicalPath())
@@ -119,8 +119,8 @@ class DefaultRedirectInfo(SimpleItem):
             if not path.startswith('/'):
                 path = '/%s' % path
 
-        assert('://' in self.host)
-        url = urlparse.urljoin(self.host, path)
+        assert('://' in self.url)
+        url = urlparse.urljoin(self.url, path)
 
         logger.info("Default URL for %s is %s" % (obj, url))
         return url
@@ -149,7 +149,7 @@ def trigger_redirection(obj, event):
         
     server_url = request.get('SERVER_URL')
     
-    base_url = _get_annotation(obj,REDIRECT_ANNOTATION).url
+    base_url = _get_annotation(obj, REDIRECT_ANNOTATION).url
 
     if not base_url:
         # no specific url, try default

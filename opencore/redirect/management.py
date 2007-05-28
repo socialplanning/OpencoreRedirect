@@ -90,11 +90,11 @@ class DefaultRedirectInfoSchemaAdapter(BaseAdapter):
             raise ComponentLookupError("Default redirect has not been installed yet.")
         return ctx
     
-    class host(classproperty):
+    class url(classproperty):
         def fget(self):
-            return self.redir_info.host
+            return self.redir_info.url
         def fset(self, val):
-            self.redir_info.host = val
+            self.redir_info.url = val
 
     class ignore_path(classproperty):
         def fget(self):

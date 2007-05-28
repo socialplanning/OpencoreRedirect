@@ -83,11 +83,11 @@ class IRedirectSetup(Interface):
 
                     
 class IDefaultRedirectInfoSetup(Interface):
-    host = TextLine(title=u'Default Host',
-                    description=u"The default host to redirect to")
+    url = TextLine(title=u'Default Redirect URL',
+                    description=u"The default url to redirect to")
 
     ignore_path = TextLine(title=u'Ignore Path',
-                           description=u"This path is stripped off absolute object paths",
+                           description=u"This path is stripped off absolute object paths (like a virtual host root)",
                            required=False)
 
 class IDefaultRedirectInfo(IDefaultRedirectInfoSetup):
