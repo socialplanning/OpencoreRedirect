@@ -17,13 +17,13 @@ def enableAccessEventHook(obj, hook_class, hook_name):
     """
     # We want the original object, not stuff in between, and no acquisition
     obj = aq_base(obj)
-    hook = AccessRule(hook_name)
-    registerBeforeTraverse(obj, hook, hook_name, 1)
 
     # disable any existing redirection hooks
     if hasattr(obj, hook_name):
         disableAccessEventHook(obj, hook_name)
-        
+
+    hook = AccessRule(hook_name)
+    registerBeforeTraverse(obj, hook, hook_name, 1)
     setattr(obj, hook_name, hook_class())
 
 

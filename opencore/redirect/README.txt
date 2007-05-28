@@ -15,8 +15,12 @@ Main Components
 We have function that setups a redirection::
 
     >>> from opencore import redirect
+    >>> from opencore.redirect import get_redirect_info
     >>> redirect.activate(self.app, url="http://redirected")
     <opencore.redirect.RedirectInfo object at ...> -> 'http://redirected' => {}
+
+    >>> self.app.__before_traverse__
+    {...(1, '__redirection_hook__'): <...AccessRule instance at ...>...}
 
 A redirection management event should be fired and logged::
 
@@ -46,6 +50,7 @@ ITestObject to provide a default view)::
 Traversing past self.app now will redirect to the url
 specified 
 
+   
     >>> print http(r'''
     ... GET /test_folder_1_ HTTP/1.1
     ... ''')
@@ -79,20 +84,18 @@ Default redirection information can be added by providing
 a utility of type IDefaultRedirectInfo
     >>> from zope.component import queryUtility
     >>> from five.intid.site import addUtility
+    >>> from opencore.redirect import DefaultRedirectInfo
     >>> addUtility(self.app, redirect.IDefaultRedirectInfo, redirect.DefaultRedirectInfo, findroot=False)
     >>> default_info = queryUtility(redirect.IDefaultRedirectInfo, context=self.app, default=None)
     >>> default_info
     <DefaultRedirectInfo at /utilities/>
     >>> default_info.host = 'http://default'
 
-If redirection is activated with the explicit=False flag,
+If redirection is activated with no url,
 the IDefaultRedirectInfo utility is used to determine
 the redirection location. 
 
-    >>> info = redirect.activate(self.app, explicit=False)
-
-    >>> redirect.IRedirected.providedBy(self.app)
-    False
+    >>> info = redirect.activate(self.app)
 
     >>> self.app.__before_traverse__
     {...(1, '__redirection_hook__'): <...AccessRule instance at ...>...}
@@ -129,26 +132,7 @@ If we reactivate with a url, things behave as before:
 Deactivation 
 =================================================
 
-If we deactivate without setting disable_hook to True,
-the hook will remain active and default redirection will
-apply (equivalent to activate with explicit=False)
-
     >>> redirect.deactivate(self.app)
-    >>> self.app.__before_traverse__
-    {...(1, '__redirection_hook__'): <...AccessRule instance at ...>...}
-
-    >>> print http(r'''
-    ... GET /monkey-time/and/more HTTP/1.1
-    ... ''')
-    HTTP/1.1 302 Moved Temporarily...
-    Location: http://default/monkey-time/and/more...
-
-
-To completely deactivate redirection, call deactivate with
-disable_hook=True. 
-
-    >>> self.log.clear()
-    >>> redirect.deactivate(self.app, disable_hook=True)
     >>> self.app.__before_traverse__.has_key((1, '__redirection_hook__'))
     False
 
@@ -177,7 +161,7 @@ We want to assure that  defaulting redirection occurs when
 the object is acquired through a redirected object::
 
     >>> defaulting = add_folder(self.app, 'defaulting')
-    >>> info = redirect.activate(defaulting, explicit=False)
+    >>> info = redirect.activate(defaulting)
     >>> print http(r'''
     ... GET /test_folder_1_/defaulting HTTP/1.1
     ... Host: redirected
@@ -189,40 +173,40 @@ Sometimes folders will be nested.  We need to assure all path segments
 are preserved. Let's create a scenario::
 
 
-    >>> redirect.deactivate(defaulting, disable_hook=True)
+    >>> redirect.deactivate(defaulting)
     >>> ndf = add_folder(defaulting, 'nested_defaulting')
     >>> nef = add_folder(defaulting, 'nested_explicit')
-    >>> d_info = redirect.activate(ndf, explicit=False)
-    >>> e_info = redirect.activate(nef, explicit=True)
+    >>> d_info = redirect.activate(ndf)
+    >>> e_info = redirect.activate(nef, url='http://redirected/')
 
-We'll wire the fake request to simulate changes in the vhosting::
-
-    >>> set_path('')
-
+We'll wire the fake request to simulate changes in the vhosting
 First we need to make sure that the redirect in is
 calculated correctly::
 
-    >>> dhost, path = redirect.get_host_info()
-    >>> redirect.default_url_for(dhost, ndf, request, default_path=path)
+    >>> from opencore.redirect.interfaces import IDefaultRedirectInfo
+    >>> dhi = queryUtility(IDefaultRedirectInfo,
+    ...                    default=None, context=self.app)
+    >>> dhi is not None
+    True
+    >>> dhi.default_url_for(ndf)
     'http://default/defaulting/nested_defaulting'
-
-This should be robust enough to deal with changes in vhosting::
-
-    >>> set_path('', 'defaulting')
-    >>> dhost, path = redirect.get_host_info()
-    >>> redirect.default_url_for(dhost, ndf, request, default_path=path)
+    
+    >>> dhi.ignore_path = '/defaulting'
+    >>> dhi.default_url_for(ndf)
     'http://default/nested_defaulting'
-    >>> set_path('')
+    >>> dhi.ignore_path = ''
 
 This should work if the object is acq wrapped in another::
 
-    >>> redirect.default_url_for(dhost, ndf.__of__(nef), request, default_path=path)
+    >>> dhi.default_url_for(ndf.__of__(nef))
     'http://default/defaulting/nested_defaulting'
 
-#@@ dunno why the object path doubles up on location...
+
 
     >>> print http(r'''
     ... GET /defaulting/nested_explicit/nested_defaulting HTTP/1.1
+    ... Host: redirected
     ... ''')
     HTTP/1.1 302 Moved Temporarily...
     Location: http://default/defaulting/nested_defaulting...
+

@@ -21,6 +21,9 @@ from zExceptions import Redirect
 import logging
 import urlparse
 
+__all__ = ['get_redirect_info', 'get_redirect_url', 'activate', 'deactivate']
+
+
 try:
     from zope.interface import noLongerProvides
 except ImportError:
@@ -38,7 +41,7 @@ RESERVED_PREFIX = "opencore_redirect"
 logger = logging.getLogger(LOG)
 
 # helper, but used during init
-def clean_host(host):
+def _clean_host(host):
     
     if not host:
         return ''
@@ -58,8 +61,6 @@ class RedirectInfo(PersistentMapping):
         super(RedirectInfo, self).__init__()
         self._url = None
         self._parent = None
-        self._hook_enabled = False
-        
         self.url = url
         self.parent = parent
 
@@ -68,7 +69,7 @@ class RedirectInfo(PersistentMapping):
             return self._parent
         def fset(self, parent): 
             if self.parent != parent: 
-                self.parent = parent
+                self._parent = parent
                 self._p_changed = 1
 
     class url(classproperty):
@@ -76,16 +77,7 @@ class RedirectInfo(PersistentMapping):
             return self._url
         def fset(self, url): 
             if self._url != url: 
-                self._url = clean_host(url)
-                self._p_changed = 1
-
-    class hook_enabled(classproperty):
-        def fget(self):
-
-            return self._hook_enabled
-        def fset(self, val):
-            if self._hook_enabled != val:
-                self._hook_enabled = val
+                self._url = _clean_host(url)
                 self._p_changed = 1
 
     def __repr__(self):
@@ -106,7 +98,7 @@ class DefaultRedirectInfo(SimpleItem):
         def fget(self):
             return self._host
         def fset(self, val):
-            self._host = clean_host(val)
+            self._host = _clean_host(val)
             self._p_changed = 1
 
     class ignore_path(classproperty):
@@ -152,12 +144,12 @@ def trigger_redirection(obj, event):
     logger.debug("Checking redirection on %s" %  obj)
 
     request=event.request
-    if should_ignore(obj, request):
+    if _should_ignore(obj, request):
         return 
         
     server_url = request.get('SERVER_URL')
     
-    base_url = get_annotation(obj,REDIRECT_ANNOTATION).url
+    base_url = _get_annotation(obj,REDIRECT_ANNOTATION).url
 
     if not base_url:
         # no specific url, try default
@@ -166,15 +158,15 @@ def trigger_redirection(obj, event):
         if default_info is not None:
             base_url = default_info.default_url_for(obj)
 
-    if base_url and not hosts_match(server_url, base_url):
+    if base_url and not _hosts_match(server_url, base_url):
         logger.debug("redirecting request "
                      "for %s to %s (%s != %s)" % (request['ACTUAL_URL'],
                                                   base_url, 
-                                                  extract_host(server_url),
-                                                  extract_host(base_url)))
-        do_relative_redirect(request, base_url)
+                                                  _extract_host(server_url),
+                                                  _extract_host(base_url)))
+        _do_relative_redirect(request, base_url)
 
-def do_relative_redirect(request, base_url):
+def _do_relative_redirect(request, base_url):
     """
     redirect the remaining portion of the request
     (the request.path stack and query args)
@@ -205,23 +197,13 @@ class RedirectHook(AccessEventHook):
     event = RedirectEvent
 
 
-def enableRedirectHook(obj):
-    cfg = get_info(obj)
-    if not cfg.hook_enabled: 
-        logger.info("Enabling redirect hook on %s" % obj)
-        enableAccessEventHook(obj, hook_class=RedirectHook, hook_name=HOOK_NAME)
-        cfg.hook_enabled = True
-    else:
-        logger.debug("Redirect hook is already enabled for %s" % obj)
+def _enableRedirectHook(obj):
+    logger.info("Enabling redirect hook on %s" % obj)
+    enableAccessEventHook(obj, hook_class=RedirectHook, hook_name=HOOK_NAME)
 
-def disableRedirectHook(obj):
-    cfg = get_info(obj)
-    if cfg.hook_enabled: 
-        logger.info("Disabling redirect hook on %s" % obj)
-        disableAccessEventHook(obj, HOOK_NAME)
-        cfg.hook_enabled = False
-    else:
-        logger.debug("Redirect hook is not enabled for %s" % obj)
+def _disableRedirectHook(obj):
+    logger.info("Disabling redirect hook on %s" % obj)
+    disableAccessEventHook(obj, HOOK_NAME)
     
 
 # == convenience functions == #
@@ -229,15 +211,15 @@ def disableRedirectHook(obj):
 def activate(obj, url=None):
     
     alsoProvides(obj, IRedirected)
-    url = clean_host(url)
+    url = _clean_host(url)
 
     logger.info("Activating redirection on %s, url=%s" %
                 (obj, url))
     
-    info = get_annotation(obj, REDIRECT_ANNOTATION, factory=RedirectInfo, url=url)
+    info = _get_annotation(obj, REDIRECT_ANNOTATION, factory=RedirectInfo, url=url)
 
     info.url = url
-    enableRedirectHook(obj)
+    _enableRedirectHook(obj)
 
     event.notify(RedirectActivationEvent(obj))
     return info
@@ -251,22 +233,27 @@ def get_redirect_url(obj):
     except TypeError:
         return None
 
+def pathstr(zope_obj):
+    path = zope_obj.getPhysicalPath()
+    return '/'.join(path)
+
 
 def deactivate(obj):
     logger.info("Deactivating redirection on %s" %
                 obj)
     noLongerProvides(obj, IRedirected)
-    disableRedirectHook(obj)
+    _disableRedirectHook(obj)
     event.notify(RedirectDeactivationEvent(obj))
 
 
 def get_info(obj):
-    return get_annotation(obj, REDIRECT_ANNOTATION)
+    return _get_annotation(obj, REDIRECT_ANNOTATION)
 
+get_redirect_info = get_info
     
 # == helpers == #
 
-def get_annotation(obj, key, **kwargs):
+def _get_annotation(obj, key, **kwargs):
     ann = IAnnotations(obj)
     notes = ann.get(key)
     if notes is None and kwargs:
@@ -278,7 +265,7 @@ def get_annotation(obj, key, **kwargs):
     return notes
 
 
-def should_ignore(ob, request):
+def _should_ignore(ob, request):
     # if the object is explicitly tagged as INotRedirected
     # always ignore it. Also ignore if the object is
     # not being published(denoted by existence of '_post_traverse').
@@ -291,13 +278,12 @@ def should_ignore(ob, request):
     
     return False
 
-def extract_host(url):
+def _extract_host(url):
     h = urlparse.urlparse(url)[1]
     if ':' in h:
         return h.split(':')[0]
     else:
         return h
 
-def hosts_match(url1, url2):
-    return extract_host(url1) == extract_host(url2)
-
+def _hosts_match(url1, url2):
+    return _extract_host(url1) == _extract_host(url2)

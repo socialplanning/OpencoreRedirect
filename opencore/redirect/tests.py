@@ -41,8 +41,6 @@ def readme_setup(tc):
 
 def test_suite():
     from zope.component import getMultiAdapter
-    from opencore.redirect import RedirectInfo, IRedirectInfo, IRedirected
-    from opencore.redirect import ITraverser, get_redirect_info
     from collective.testing.interfaces import ITestObject
     from zope.interface import alsoProvides
     
