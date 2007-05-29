@@ -13,36 +13,11 @@ except ImportError:
 class IRedirected(IAnnotatable):
     """An object that submits to selective redirection traversal"""
 
-
-class INotRedirected(Interface): 
-    """An object that is ignored by the redirector under all circumstances"""
-
-
 class IRedirectInfo(IReadMapping, IWriteMapping):
     """Redirect annotation BTree bag"""
     url = Attribute('base url for redirection')
     parent = Attribute('physical path to a parent object')
 
-
-class IHostInfo(Interface):
-    """utility declaratively representing the default host for an
-    instance('opencore.redirect.default_host')"""
-    host = TextLine(
-        title=u"Default Host", 
-        description=u"The hostname to default to",
-        required=False)
-
-    path = TextLine(
-        title=u"Default Path Prefix", 
-        description=u"The default path to prepend to the object path",
-        required=False
-        )
-    
-    vhost = TextLine(
-        title=u"vhost url", 
-        description=u"address to virtual hoster",
-        required=False
-        )
 
 # == redirect management events ==#
 
@@ -106,7 +81,18 @@ class IRedirectSetup(Interface):
         description = u'redirect to this url')
 
 
+                    
+class IDefaultRedirectInfoSetup(Interface):
+    url = TextLine(title=u'Default Redirect URL',
+                    description=u"The default url to redirect to")
+
+    ignore_path = TextLine(title=u'Ignore Path',
+                           description=u"This path is stripped off absolute object paths (like a virtual host root)",
+                           required=False)
+
+class IDefaultRedirectInfo(IDefaultRedirectInfoSetup):
     
-
-
-
+    def default_url_for(obj):
+        """
+        return the path 
+        """

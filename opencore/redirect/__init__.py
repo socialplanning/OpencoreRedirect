@@ -1,15 +1,11 @@
-from Acquisition import aq_inner, aq_parent
 from BTrees.OOBTree import OOBTree
 from OFS.SimpleItem import SimpleItem
-from Products.Five import BrowserView
-from Products.Five.traversable import Traversable
-from five.intid.keyreference import get_root
 from hook import AccessEventHook, enableAccessEventHook, disableAccessEventHook
 from memojito import memoizedproperty
 from opencore.redirect.classproperty import property as classproperty
 from opencore.redirect.interfaces import IRedirectEvent, RedirectEvent, HOOK_NAME
-from opencore.redirect.interfaces import IRedirectInfo, IHostInfo
-from opencore.redirect.interfaces import IRedirected, INotRedirected
+from opencore.redirect.interfaces import IRedirectInfo, IDefaultRedirectInfo
+from opencore.redirect.interfaces import IRedirected
 from opencore.redirect.interfaces import RedirectActivationEvent, RedirectDeactivationEvent
 from opencore.redirect.interfaces import IRedirectManagementEvent
 from persistent import Persistent
@@ -19,10 +15,14 @@ from zope.app.component import queryNextUtility
 from zope.app.traversing.adapters import Traverser, _marker
 from zope.app.traversing.interfaces import ITraverser
 from zope.component import getMultiAdapter, adapts, adapter
-from zope.component import getUtility, handle
+from zope.component import queryUtility, handle
 from zope.interface import implements, alsoProvides, Interface
+from zExceptions import Redirect
 import logging
 import urlparse
+
+__all__ = ['get_redirect_info', 'get_redirect_url', 'activate', 'deactivate']
+
 
 try:
     from zope.interface import noLongerProvides
@@ -36,20 +36,50 @@ except ImportError:
 
 
 _marker = object()
-LOG = KEY = "opencore.redirect"
+LOG = REDIRECT_ANNOTATION = "opencore.redirect"
 RESERVED_PREFIX = "opencore_redirect"
 logger = logging.getLogger(LOG)
+
+# helper, but used during init
+def _clean_host(host):
+    
+    if not host:
+        return ''
+    
+    if not '://' in host:
+        logger.warn("no scheme specified in host '%s' assuming http" % host)
+        host = 'http://%s' % host
+
+    return host
 
 # == annotation bag == #
 
 class RedirectInfo(PersistentMapping):
     implements(IRedirectInfo)
+    
     def __init__(self, url=None, parent=None):
         super(RedirectInfo, self).__init__()
+        self._url = None
+        self._parent = None
         self.url = url
         self.parent = parent
-        self._p_changed = 1
-        
+
+    class parent(classproperty):
+        def fget(self):
+            return self._parent
+        def fset(self, parent): 
+            if self.parent != parent: 
+                self._parent = parent
+                self._p_changed = 1
+
+    class url(classproperty):
+        def fget(self):
+            return self._url
+        def fset(self, url): 
+            if self._url != url: 
+                self._url = _clean_host(url)
+                self._p_changed = 1
+
     def __repr__(self):
         return "%s -> '%s' => %s" %(Persistent.__repr__(self),
                                     self.url,
@@ -57,48 +87,44 @@ class RedirectInfo(PersistentMapping):
 
 # == utility == #
 
-class HostInfo(object):
-    implements(IHostInfo)
-    def __init__(self, defhost='', defpath=''):
-        self.path = defpath
-        self.host = defhost
-
-_global_host_info = HostInfo()
-
-
-class LocalHostInfo(SimpleItem):
-    implements(IHostInfo)
-    def __init__(self, defhost='', defpath=''):
-        self._path = defpath
-        self._host = defhost
-
-    def fetch(attr, val=None, cur_dh=None):
-        if val: return val
-        if not cur_dh:
-            self = cur_dh
-        cur_dh = queryNextUtility(cur_dh, IHostInfo)
-        if not cur_dh:
-            return ''
-        return self.fetch(attr, getattr(cur_dh, attr, None), cur_dh)
-
-    class path(classproperty):
-        def fget(self):
-            if self._path:
-                return self._path
-            return self.fetch('path')
-            
-        def fset(self, val):
-            self._path = val
-
-    class host(classproperty):
-        def fget(self):
-            if self._host:
-                return self._host
-            return self.fetch('host')
-        
-        def fset(self, val):
-            self._host = val
+class DefaultRedirectInfo(SimpleItem):
+    implements(IDefaultRedirectInfo)
     
+    def __init__(self, url='', ignore_path=''):
+        self.url = url
+        self.ignore_path = ignore_path
+
+    class url(classproperty):
+        def fget(self):
+            return self._url
+        def fset(self, val):
+            self._url = _clean_host(val)
+            self._p_changed = 1
+
+    class ignore_path(classproperty):
+        def fget(self):
+            return self._ignore_path
+        def fset(self, val):
+            self._ignore_path = val
+            self._p_changed = 1
+
+    def default_url_for(self, obj):
+        if not self.url:
+            return ''
+
+        path = '/'.join(obj.getPhysicalPath())
+
+        if self.ignore_path and path.startswith(self.ignore_path):
+            path = path[len(self.ignore_path):]
+            if not path.startswith('/'):
+                path = '/%s' % path
+
+        assert('://' in self.url)
+        url = urlparse.urljoin(self.url, path)
+
+        logger.info("Default URL for %s is %s" % (obj, url))
+        return url
+
 # == subscribers == #
 
 def redispatch(event):
@@ -112,200 +138,57 @@ def log_redirect_event(event):
 def log_redirect_management_event(event):
     logger.info("%s -- %s" %(event, event.obj))
 
+
 @adapter(IRedirected, IRedirectEvent)
-def explicit_redirection(obj, event):
+def trigger_redirection(obj, event):
+    logger.debug("Checking redirection on %s" %  obj)
+
     request=event.request
-    if should_ignore(obj, request):
-        raise RuntimeError("we should not be here")
+    if _should_ignore(obj, request):
+        return 
         
     server_url = request.get('SERVER_URL')
-    redirect_server = None
-    info = get_annotation(obj, KEY)
-    if info.url: 
-        redirect_server = urlparse.urlparse(info.url)[1]
+    
+    base_url = _get_annotation(obj, REDIRECT_ANNOTATION).url
 
-    # check for external redirect
-    if (redirect_server and not server_url.find(redirect_server)>-1
-        and not RESERVED_PREFIX in request['PATH_INFO'] and 
-        not RESERVED_PREFIX in request.getURL()):
-            
-        set_redirect(obj, request, info.url, further_path=True)
+    if not base_url:
+        # no specific url, try default
+        default_info = queryUtility(IDefaultRedirectInfo, 
+                                    default=None, context=obj)
+        if default_info is not None:
+            base_url = default_info.default_url_for(obj)
 
-# @@ consider stacking event ie. make this listener before
-# redispatching
-@adapter(Interface, IRedirectEvent)
-def defaulting_redirection(obj, event):
-    if IRedirected.providedBy(obj):
-        return False # bail out
-    request=event.request
-    server_url = request.get('SERVER_URL')
-    default_host, path = get_host_info()
-    if not should_ignore(obj, request) and \
-           (default_host and not server_url.startswith(default_host)):
-        
-        logger.info("DF: redirecting request "
-                         "for %s (not under %s)" % (server_url, default_host))
+    if base_url and not _hosts_match(server_url, base_url):
+        logger.debug("redirecting request "
+                     "for %s to %s (%s != %s)" % (request['ACTUAL_URL'],
+                                                  base_url, 
+                                                  _extract_host(server_url),
+                                                  _extract_host(base_url)))
+        _do_relative_redirect(request, base_url)
 
-        new_url = default_url_for(default_host, obj, request, default_path=path)
-        if new_url is not None:
-            return set_redirect(obj, request, new_url)
-
-
-def default_url_for(default_host, object, request, default_path=""):
+def _do_relative_redirect(request, base_url):
     """
+    redirect the remaining portion of the request
+    (the request.path stack and query args)
+    relative to base_url.
     """
-    if default_host is None: 
-        return None
-
-    # phys. path to object for site root of our default host.
-    # compensates for vhostmonstering
-    host_path = request.physicalPathFromURL(default_host)
-
-    # phys path to object requesting redirection
-    obj_path = list(object.getPhysicalPath())
-
-    # host name / redirected path of object less the host path
-    path = [default_host] + obj_path[len(host_path):]
-
-    url = '/'.join(path)
     
-    logger.info("Default URL for %s is %s" % (object, url))
+    assert('://' in base_url) 
 
-    return url
+    rest = request.path[:]
+    rest.reverse()
+    rest = '/'.join(rest)
+    url = base_url
+    if not url.endswith('/'):
+        url += '/'
+    url = urlparse.urljoin(url, rest)
 
+    qs = request['QUERY_STRING']
+    if qs:
+        url += '?%s' % qs 
 
-def get_host_info():
-    host_info = getUtility(IHostInfo)
-    return host_info.host, host_info.path
-
-# == traversers == #
-
-class SubitemSpoofingTraverser(Traverser):
-    get_root = staticmethod(get_root)
-    _default_traverse = Traverser.traverse
-
-    @memoizedproperty
-    def info(self):
-        info = get_annotation(self.context, KEY)
-        return info
-    
-    def reroute(self, path, default=_marker):
-        reroute = self.info.get(path)
-        if reroute:
-            return self.get_root(self.context).restrictedTraverse(reroute)
-        return default
-
-    def traverse(self, path, default=_marker, request=None):
-        # check for internal redirect
-        obj = self.reroute(path[0])
-        if obj is not _marker:
-            return obj
-
-        # if none found traverse normally @@ not respecting default
-        # traversal as primary might be a 'crime against nature'
-        return self._default_traverse(path, default=_marker, request=request)
-
-
-
-
-# == view == #
-
-class Redirector(BrowserView, Traversable):
-    """there is only zpublisher"""
-    implements(ITraverser)
-    debug = False
-    
-    def __init__(self, context, request):
-        self.context = context
-        self.request = request
-        self.store = None
-        self.subpath = []
-        self.path_start = None
-        self.calculate_furtherpath=False
-
-    def __of__(self, obj):
-        if obj is self:
-            return self
-        return super(Redirector, self).__of__(obj)
-
-    @property
-    def context_path(self):
-        return list(self.context.getPhysicalPath())
-
-    @property
-    def original_url(self):
-        return "%s%s" %(self.request['SERVER_URL'], self.request['PATH_INFO'])
-
-    @property
-    def url_path(self):
-        return self.request.physicalPathFromURL(self.original_url)
-
-    @property
-    def further_path(self):
-        context_path = self.context_path
-        url_path = self.url_path 
-
-        cp_len = len(context_path)
-        rest = url_path[cp_len:]
-
-##         if url_path[:cp_len] != context_path: 
-##             # XXX 
-##             #
-##             # if the url_path does not start with the context_path 
-##             # the context object has not been reached using 
-##             # its physical path... 
-##             #
-##             # here we assume it has been reached by a longer 
-##             # url than its physical url by searching for 
-##             # the objects name in the remainder of the 
-##             # url_path, which is somewhat questionable
-##             # (might it not be the first instance of the name 
-##             #  in the list?) 
-##             #
-##             # we allow ValueError to be raised here if the 
-##             # object's name is not present in the remainder 
-##             # because we have no sensible choice to make 
-##             # otherwise...
-##             #
-##             # now if getPhysicalPathFromURL could actually return 
-##             # the kind of path that context.getPhysicalPath does, 
-##             # we'd be in better shape... we could simply strip 
-##             # off the prefix context_path from url_path 
-##             #
-##             ob_name = context_path[-1]
-##             ob_pos = rest.index(ob_name)
-##             rest = rest[ob_pos+1:]
-            
-        # if 'redirect' has been placed on the url_path by traversal 
-        # hackishly, don't include it. 
-        if self.request._hacked_path and len(rest) > 0 and \
-               rest[-1] == 'redirect':
-            self.logger.info("hacked path:%s")
-            return rest[:-1]
-        else:
-            return rest
-
-    class redirect_url(classproperty):
-        def fget(self):
-            if self.calculate_furtherpath:
-                return "%s/%s" %(self._url, '/'.join(self.further_path))
-            return self._url
-        def fset(self, value):
-            self._url = value
-        
-    def redirect(self):
-        self.request.RESPONSE.redirect(self.redirect_url, lock=1)
-        self.logger.info("Redirected to %s" %self.redirect_url)
-        return self.request.RESPONSE
-
-    #@@ 2.10?:: def traverse( self, name, furtherPath ):
-    def traverse(self, path, default=_marker, request=None):
-        self.subpath.append(path[0]) # necessary?
-        return self
-    
-    @property
-    def logger(self):
-        return logging.getLogger(LOG)
+    logger.info("Redirecting to %s" % url)
+    raise Redirect, url
 
 
 # == hook functions == #
@@ -314,30 +197,30 @@ class RedirectHook(AccessEventHook):
     event = RedirectEvent
 
 
-def enableRedirectHook(obj):
+def _enableRedirectHook(obj):
+    logger.info("Enabling redirect hook on %s" % obj)
     enableAccessEventHook(obj, hook_class=RedirectHook, hook_name=HOOK_NAME)
 
-
-def disableRedirectHook(obj):
+def _disableRedirectHook(obj):
+    logger.info("Disabling redirect hook on %s" % obj)
     disableAccessEventHook(obj, HOOK_NAME)
     
 
 # == convenience functions == #
 
-def activate(obj, url=None, parent=None, subprojects=None, explicit=True):
-    if explicit:
-        alsoProvides(obj, IRedirected)
-    info = get_annotation(obj, KEY, factory=RedirectInfo, url=url,
-                          parent=parent)
-    if info.url is not url:
-        info.url = url
-    if info.parent is not parent:
-        info.parent = parent
-    if subprojects:
-        for project_name, path in subprojects:
-            info[project_name] = path
-    info._p_changed=1
-    enableRedirectHook(obj)
+def activate(obj, url=None):
+    
+    alsoProvides(obj, IRedirected)
+    url = _clean_host(url)
+
+    logger.info("Activating redirection on %s, url=%s" %
+                (obj, url))
+    
+    info = _get_annotation(obj, REDIRECT_ANNOTATION, factory=RedirectInfo, url=url)
+
+    info.url = url
+    _enableRedirectHook(obj)
+
     event.notify(RedirectActivationEvent(obj))
     return info
 
@@ -350,39 +233,30 @@ def get_redirect_url(obj):
     except TypeError:
         return None
 
-
-def deactivate(obj, disable_hook=False):
-    noLongerProvides(obj, IRedirected)
-    if disable_hook:
-        disableRedirectHook(obj)
-    event.notify(RedirectDeactivationEvent(obj))
-
-
-def get_info(obj):
-    return get_annotation(obj, KEY)
-
-get_redirect_info = get_info
-
-    
-def remove_subproject(obj, ids):
-    info= get_annotation(obj, KEY, factory=RedirectInfo, url=url,
-                         parent=parent)
-    for pid in ids:
-        if info.get(pid):
-            del info[pid]
-            
-
-# == helpers == #
-
 def pathstr(zope_obj):
     path = zope_obj.getPhysicalPath()
     return '/'.join(path)
 
 
-def get_annotation(obj, key, **kwargs):
+def deactivate(obj):
+    logger.info("Deactivating redirection on %s" %
+                obj)
+    noLongerProvides(obj, IRedirected)
+    _disableRedirectHook(obj)
+    event.notify(RedirectDeactivationEvent(obj))
+
+
+def get_info(obj):
+    return _get_annotation(obj, REDIRECT_ANNOTATION)
+
+get_redirect_info = get_info
+    
+# == helpers == #
+
+def _get_annotation(obj, key, **kwargs):
     ann = IAnnotations(obj)
     notes = ann.get(key)
-    if not notes and kwargs:
+    if notes is None and kwargs:
         factory = kwargs.pop('factory')
         if not factory:
             raise Exception("No annotation factory given")
@@ -391,23 +265,25 @@ def get_annotation(obj, key, **kwargs):
     return notes
 
 
-def set_redirect(context, request, url, further_path=False):
-    redirector = getMultiAdapter((context, request), name=KEY)
-    redirector.redirect_url = url
-    redirector.calculate_furtherpath=further_path
-    redirector.redirect()
-
-
-def should_ignore(ob, request): 
-    # if the object is explicitly tagged as INotRedirected 
-    # always ignore it. Also ignore if the object is 
+def _should_ignore(ob, request):
+    # if the object is explicitly tagged as INotRedirected
+    # always ignore it. Also ignore if the object is
     # not being published(denoted by existence of '_post_traverse').
     publishing = hasattr(request, '_post_traverse')
-    if INotRedirected.providedBy(ob) or not publishing: 
+    if (not IRedirected.providedBy(ob) or
+        not publishing or
+        RESERVED_PREFIX in request['PATH_INFO'] or 
+        RESERVED_PREFIX in request.getURL()):
         return True
+    
     return False
 
+def _extract_host(url):
+    h = urlparse.urlparse(url)[1]
+    if ':' in h:
+        return h.split(':')[0]
+    else:
+        return h
 
-
-
-
+def _hosts_match(url1, url2):
+    return _extract_host(url1) == _extract_host(url2)

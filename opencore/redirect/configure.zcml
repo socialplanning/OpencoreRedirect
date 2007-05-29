@@ -15,22 +15,8 @@
      for="opencore.redirect.interfaces.IRedirectManagementEvent"
      />
 
-  <subscriber handler="opencore.redirect.explicit_redirection" />
-  <subscriber handler="opencore.redirect.defaulting_redirection" />
 
-  <adapter 
-     for=".IRedirected" 
-     provides="zope.app.traversing.interfaces.ITraverser" 
-     factory="opencore.redirect.SubitemSpoofingTraverser" 
-   />
-
-  <browser:page
-     for="*"
-     class="opencore.redirect.Redirector"
-     permission="zope.Public"
-     attribute="redirect"
-     name="opencore.redirect"
-     />
+  <subscriber handler="opencore.redirect.trigger_redirection" />
 
   <adapter factory=".management.RedirectConfigSchemaAdapter" />
 
@@ -40,22 +26,19 @@
      permission="zope2.ViewManagementScreens"
      name="opencore_redirect_config" />
 
-  <adapter factory=".management.HostInfoSchemaAdapter" />
+  <adapter factory=".management.DefaultRedirectInfoSchemaAdapter" />
   <browser:page
-     for="OFS.Folder.IFolder"
-     class=".management.HostInfoForm"
-     permission="zope2.ViewManagementScreens"
-     name="manage-defaulthost.html" />
+	for="Products.CMFPlone.Portal.PloneSite"
+	class=".management.DefaultRedirectInfoForm"
+	permission="zope2.ViewManagementScreens" 
+	name="opencore_redirect_config_default" />
 
   <browser:page
-     for="*"
-     class=".management.HostInfoInstall"
-     permission="five.ManageSite"
-     template="install.pt"
-     name="install-ldh.html"
-     />
-
-  <utility component="opencore.redirect._global_host_info" />
+        for="Products.CMFPlone.Portal.PloneSite"
+        class=".management.DefaultRedirectInfoInstall"
+        permission="zope2.ViewManagementScreens"
+        template="install.pt"
+        name="opencore_redirect_install_default" />
 
   <!-- fivish compat 2.9 bits -->
   <five:traversable class="OFS.Application.Application" />
@@ -72,12 +55,5 @@
      class="OFS.Folder.Folder" 
      interface="zope.app.annotation.interfaces.IAttributeAnnotatable"
      />
- 
-  <!-- for development purposes only (these are the defaults
-       anyway) -->
-  <!-- opencore:defaulthost
-     host="localhost:8080" 
-     path="/"
-     / -->
 
 </configure>

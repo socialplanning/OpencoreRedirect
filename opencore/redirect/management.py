@@ -1,18 +1,19 @@
 from OFS.Folder import Folder
-from interfaces import IRedirectSetup, IHostInfo
+from interfaces import IRedirectSetup, IDefaultRedirectInfoSetup, IDefaultRedirectInfo
 from memojito import memoizedproperty
 from opencore import redirect 
 from opencore.redirect import LOG
 from opencore.redirect.classproperty import property as classproperty
 from plone.fieldsets.form import FieldsetsEditForm
 from zope.app.component.interfaces import ISite, IPossibleSite
-from zope.component import adapts, getUtility
+from zope.component import adapts, queryUtility
 from zope.formlib import form
 from zope.interface import Interface, implements
 import logging
 from five.intid.site import addUtility, ComponentLookupError
 from Products.Five import BrowserView
 
+logger = logging.getLogger(LOG)
 
 class BaseAdapter(object):
     def __init__(self, context):
@@ -42,40 +43,12 @@ class RedirectSetupForm(BaseForm):
     label = 'Activate Redirection' 
 
 
-class HostInfoForm(BaseForm):
-    form_fields = form.FormFields(IHostInfo)
-    label = 'Set Default Host' 
-
-
-class HostInfoSchemaAdapter(BaseAdapter):
-    adapts(IPossibleSite)
-    implements(IHostInfo)
-
-    @memoizedproperty
-    def dh(self):
-        return getUtility(IHostInfo)
-
-    class path(classproperty):
-        def fget(self):
-            return self.dh.path
-            
-        def fset(self, val):
-            self.dh.path = val
-
-    class host(classproperty):
-        def fget(self):
-            return self.dh.host
-            
-        def fset(self, val):
-            self.dh.host = val
-
-
 class RedirectConfigSchemaAdapter(BaseAdapter):
     adapts(Folder)
     implements(IRedirectSetup)
     
     @memoizedproperty
-    def info(self):
+    def info(self): 
         return redirect.get_info(self.context)
 
     class redirect_url(classproperty):
@@ -102,33 +75,51 @@ class RedirectConfigSchemaAdapter(BaseAdapter):
             for key, value in val:
                 self.info[key] = value
 
+class DefaultRedirectInfoForm(BaseForm):
+    form_fields = form.FormFields(IDefaultRedirectInfoSetup)
+    label = 'Configure Default Redirection'
 
-class HostInfoInstall(BrowserView):
-    @property
-    def context(self):
-        return self._context[0]
+class DefaultRedirectInfoSchemaAdapter(BaseAdapter):
+    adapts(IPossibleSite)
+    implements(IDefaultRedirectInfoSetup)
+
+    @memoizedproperty
+    def redir_info(self):
+        ctx = queryUtility(IDefaultRedirectInfo, default=None)
+        if ctx is None:
+            raise ComponentLookupError("Default redirect has not been installed yet.")
+        return ctx
     
+    class url(classproperty):
+        def fget(self):
+            return self.redir_info.url
+        def fset(self, val):
+            self.redir_info.url = val
+
+    class ignore_path(classproperty):
+        def fget(self):
+            return self.redir_info.ignore_path
+        def fset(self, val):
+            self.redir_info.ignore_path = val
+
+
+class DefaultRedirectInfoInstall(BrowserView):
+
     def __init__(self, context, request):
-        self._context = context,
+
+        self.context = context
         self.request = request
-        doinstall = self.request.get('install', None)
+
+        doinstall = self.request.get('install', None) and not self.installed
         if doinstall:
             self.install()
 
     def install(self):
-        addUtility(self.context, IHostInfo, redirect.LocalHostInfo, findroot=False)
+        addUtility(self.context, IDefaultRedirectInfo, redirect.DefaultRedirectInfo, findroot=False)
+        logger.info("Persistent default host information installed.")
 
     @property
     def installed(self):
-        installed = False
-        try:
-            dh = getUtility(IHostInfo)
-            if dh and dh is not redirect.global_defaulthost:
-                installed = True
-        except ComponentLookupError, e:
-            pass
-        return installed
-
-
-
+        return queryUtility(IDefaultRedirectInfo,
+                            default=None) is not None
 
