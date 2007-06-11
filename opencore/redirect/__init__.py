@@ -216,7 +216,7 @@ def activate(obj, url=None):
     logger.info("Activating redirection on %s, url=%s" %
                 (obj, url))
     
-    info = _get_annotation(obj, REDIRECT_ANNOTATION, factory=RedirectInfo, url=url)
+    info = get_info(obj, create_if_necessary=True)
 
     info.url = url
     _enableRedirectHook(obj)
@@ -245,12 +245,20 @@ def deactivate(obj):
     _disableRedirectHook(obj)
     event.notify(RedirectDeactivationEvent(obj))
 
+def _deannotate(obj):
+    ann = IAnnotations(obj)
+    if ann.get(REDIRECT_ANNOTATION) is not None:
+        del ann[REDIRECT_ANNOTATION]
 
-def get_info(obj):
-    return _get_annotation(obj, REDIRECT_ANNOTATION)
+def get_info(obj, create_if_necessary=False):
+    if create_if_necessary:
+        return _get_annotation(obj, REDIRECT_ANNOTATION,
+                               factory=RedirectInfo)
+    else:
+        return _get_annotation(obj, REDIRECT_ANNOTATION)
 
 get_redirect_info = get_info
-    
+
 # == helpers == #
 
 def _get_annotation(obj, key, **kwargs):

@@ -47,16 +47,17 @@ class RedirectConfigSchemaAdapter(BaseAdapter):
     adapts(Folder)
     implements(IRedirectSetup)
     
-    @memoizedproperty
-    def info(self): 
-        return redirect.get_info(self.context)
-
     class redirect_url(classproperty):
         def fget(self):
-            return self.info.url
+            info = redirect.get_info(self.context)
+            if info is not None:
+                return info.url
+            else:
+                return ''
             
         def fset(self, val):
-            self.info.url = val
+            info = redirect.get_info(self.context, create_if_necessary=True)
+            info.url = val
             
     class activate(classproperty):
         def fget(self):
@@ -67,13 +68,19 @@ class RedirectConfigSchemaAdapter(BaseAdapter):
                 return redirect.activate(self.context, self.redirect_url)
             return redirect.deactivate(self.context)
 
-    # dict/object widget? not worth the work right now
-    class subprojects(classproperty):
-        def fget(self):
-            return self.info
-        def fset(self, val):
-            for key, value in val:
-                self.info[key] = value
+
+class RedirectDestroy(BrowserView):
+    def __init__(self, context, request):
+        self.context = context
+        self.request = request
+
+        self.has_info = redirect.get_info(context) is not None
+
+        if self.request.get('destroy', None) is not None:
+            redirect.deactivate(context)
+            redirect._deannotate(context)
+            logger.info("destroyed redirection related info for %s" % context)
+
 
 class DefaultRedirectInfoForm(BaseForm):
     form_fields = form.FormFields(IDefaultRedirectInfoSetup)
@@ -101,6 +108,7 @@ class DefaultRedirectInfoSchemaAdapter(BaseAdapter):
             return self.redir_info.ignore_path
         def fset(self, val):
             self.redir_info.ignore_path = val
+
 
 
 class DefaultRedirectInfoInstall(BrowserView):

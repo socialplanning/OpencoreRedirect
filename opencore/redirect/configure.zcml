@@ -26,6 +26,15 @@
      permission="zope2.ViewManagementScreens"
      name="opencore_redirect_config" />
 
+  <browser:page
+        for="OFS.Folder.IFolder"
+        class=".management.RedirectDestroy"
+        permission="zope2.ViewManagementScreens"
+        template="destroy.pt"
+        name="opencore_redirect_destroy" />
+
+
+
   <adapter factory=".management.DefaultRedirectInfoSchemaAdapter" />
   <browser:page
 	for="Products.CMFPlone.Portal.PloneSite"
