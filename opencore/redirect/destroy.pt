@@ -1,0 +1,15 @@
+<html>
+  <head>
+  </head>
+  <body>
+    <div tal:condition="not:view/has_info">The object has no redirect info.</div>
+    <div>
+      <form method=POST tal:condition="view/has_info">
+	<input type="submit" 
+	       value="Destroy Redirect Info" 
+	       name="destroy"
+	       style="border: 2px solid #F99; background-color: red"/>
+      </form>
+    </div>
+  </body>
+</html>
