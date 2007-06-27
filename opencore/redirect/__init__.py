@@ -295,3 +295,57 @@ def _extract_host(url):
 
 def _hosts_match(url1, url2):
     return _extract_host(url1) == _extract_host(url2)
+
+
+
+# == Migration functions == # 
+
+
+def _migrate_redirect_info(info):
+    """
+    this function migrates an old RedirectInfo object
+    to use the properties rather than attributes. 
+
+    it does not modify object which already use the
+    properties
+    """
+    if IRedirectInfo.providedBy(info):
+        if not hasattr(info, '_url'):
+            old_url = info.__dict__.get('url', None)
+            info._url = None
+            info.url = old_url
+        if not hasattr(info, '_parent'):
+            old_parent = info.__dict__.get('parent', None)
+            info._parent = None
+            info.parent = old_parent
+
+def migrate_redirected_object(obj, deactivate=False):
+    info = get_info(obj)
+
+    if info is not None:
+        # already redirected, migrate if necessary
+        _migrate_redirect_info(info)
+        
+        if not deactivate: 
+            activate(obj, url=info.url)
+        else:
+            deactivate(obj)
+                
+    elif not deactivate:
+        # enable default redirection
+        activate(obj)
+
+
+def migrate_redirected_objects(container, interface, ignore=[]):
+    """
+    This makes sure all objects in the container implementing
+    the interface given have redirection properly installed.
+
+    Redirection is disabled for objects with ids in the ignore
+    list. 
+    """
+    ignore = set(ignore)
+    for obj in container.objectValues():
+        if not interface.providedBy(obj):
+            continue
+        migrate_redirected_object(obj, obj.getId() in ignore)
