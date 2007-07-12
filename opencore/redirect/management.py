@@ -58,6 +58,17 @@ class RedirectConfigSchemaAdapter(BaseAdapter):
         def fset(self, val):
             info = redirect.get_info(self.context, create_if_necessary=True)
             info.url = val
+
+    class alias_pattern(classproperty):
+        def fget(self):
+            info = redirect.get_info(self.context)
+            if info is not None:
+                return info.alias_pattern
+            else:
+                return ''
+        def fset(self, pat):
+            info = redirect.get_info(self.context, create_if_necessary=True)
+            info.alias_pattern = pat
             
     class activate(classproperty):
         def fget(self):
@@ -109,6 +120,11 @@ class DefaultRedirectInfoSchemaAdapter(BaseAdapter):
         def fset(self, val):
             self.redir_info.ignore_path = val
 
+    class alias_pattern(classproperty):
+        def fget(self):
+            return self.redir_info.alias_pattern
+        def fset(self, pat):
+            self.redir_info.alias_pattern = pat
 
 
 class DefaultRedirectInfoInstall(BrowserView):

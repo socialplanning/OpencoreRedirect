@@ -80,6 +80,10 @@ class IRedirectSetup(Interface):
         required = False, 
         description = u'redirect to this url')
 
+    alias_pattern = TextLine(
+        title = u'Alias Pattern',
+        required = False,
+        description = u'regular expression matching acceptable aliases for this host')
 
                     
 class IDefaultRedirectInfoSetup(Interface):
@@ -91,6 +95,11 @@ class IDefaultRedirectInfoSetup(Interface):
                            description=u"This path is stripped off absolute object paths (like a virtual host root)",
                            required=False)
 
+    alias_pattern = TextLine(
+        title = u'Alias Pattern',
+        required = False,
+        description = u'regular expression matching acceptable aliases for this host')
+    
 class IDefaultRedirectInfo(IDefaultRedirectInfoSetup):
     
     def default_url_for(obj):

@@ -20,6 +20,7 @@ from zope.interface import implements, alsoProvides, Interface
 from zExceptions import Redirect
 import logging
 import urlparse
+import re
 
 __all__ = ['get_redirect_info', 'get_redirect_url', 'activate', 'deactivate']
 
@@ -61,6 +62,8 @@ class RedirectInfo(PersistentMapping):
         super(RedirectInfo, self).__init__()
         self._url = None
         self._parent = None
+        self._alias_pattern = ''
+        
         self.url = url
         self.parent = parent
 
@@ -80,20 +83,37 @@ class RedirectInfo(PersistentMapping):
                 self._url = _clean_host(url)
                 self._p_changed = 1
 
+    class alias_pattern(classproperty):
+        def fget(self):
+            return self._alias_pattern
+        def fset(self, pat):
+            if pat:
+                re.compile(pat)
+                self._alias_pattern = pat
+            else:
+                self._alias_pattern = ''
+                
+            self._p_changed = 1
+
     def __repr__(self):
         return "%s -> '%s' => %s" %(Persistent.__repr__(self),
                                     self.url,
                                     super(RedirectInfo, self).__repr__())
+    
 
 # == utility == #
 
 class DefaultRedirectInfo(SimpleItem):
     implements(IDefaultRedirectInfo)
     
-    def __init__(self, url='', ignore_path=''):
+    def __init__(self, url='', ignore_path='', alias_pattern=None):
+        self._url = ''
+        self._ignore_path = ''
+        self._alias_pattern = None
+        
         self.url = url
         self.ignore_path = ignore_path
-
+    
     class url(classproperty):
         def fget(self):
             return self._url
@@ -106,6 +126,18 @@ class DefaultRedirectInfo(SimpleItem):
             return self._ignore_path
         def fset(self, val):
             self._ignore_path = val
+            self._p_changed = 1
+
+    class alias_pattern(classproperty):
+        def fget(self):
+            return self._alias_pattern
+        def fset(self, pat):
+            if pat:
+                re.compile(pat)
+                self._alias_pattern = pat
+            else:
+                self._alias_pattern = ''
+                
             self._p_changed = 1
 
     def default_url_for(self, obj):
@@ -148,8 +180,9 @@ def trigger_redirection(obj, event):
         return 
         
     server_url = request.get('SERVER_URL')
-    
-    base_url = _get_annotation(obj, REDIRECT_ANNOTATION).url
+
+    info = _get_annotation(obj, REDIRECT_ANNOTATION)
+    base_url = info.url
 
     if not base_url:
         # no specific url, try default
@@ -159,6 +192,20 @@ def trigger_redirection(obj, event):
             base_url = default_info.default_url_for(obj)
 
     if base_url and not _hosts_match(server_url, base_url):
+
+        alias_pat = info.alias_pattern
+        if not alias_pat:
+            default_info = queryUtility(IDefaultRedirectInfo, 
+                                        default=None, context=obj)
+            if default_info is not None:
+                alias_pat = default_info.alias_pattern 
+
+        if alias_pat and _alias_match(alias_pat, server_url):
+            logger.debug("accepting alias '%s' for '%s'" %
+                         (server_url, base_url))
+            return 
+
+            
         logger.debug("redirecting request "
                      "for %s to %s (%s != %s)" % (request['ACTUAL_URL'],
                                                   base_url, 
@@ -297,6 +344,17 @@ def _hosts_match(url1, url2):
     return _extract_host(url1) == _extract_host(url2)
 
 
+def _alias_match(alias_pat, server_url): 
+    other_hosts = re.compile(alias_pat)
+    logger.debug("checking '%s' against aliases '%s'" %
+                 (server_url, alias_pat))
+
+    host = _extract_host(server_url)
+    if re.match(other_hosts, host):
+        return True
+    return False
+
+
 
 # == Migration functions == # 
 
@@ -318,6 +376,9 @@ def _migrate_redirect_info(info):
             old_parent = info.__dict__.get('parent', None)
             info._parent = None
             info.parent = old_parent
+        if not hasattr(info, '_alias_pattern'):
+            info._alias_pattern = ''
+            info._p_changed = 1
 
 def migrate_redirected_object(obj, deactivate=False):
     info = get_info(obj)
