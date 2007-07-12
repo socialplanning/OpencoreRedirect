@@ -106,13 +106,10 @@ class RedirectInfo(PersistentMapping):
 class DefaultRedirectInfo(SimpleItem):
     implements(IDefaultRedirectInfo)
     
-    def __init__(self, url='', ignore_path='', alias_pattern=None):
-        self._url = ''
-        self._ignore_path = ''
-        self._alias_pattern = None
-        
+    def __init__(self, url='', ignore_path='', alias_pattern='(^localhost$)'):
         self.url = url
         self.ignore_path = ignore_path
+        self.alias_pattern = alias_pattern
     
     class url(classproperty):
         def fget(self):
@@ -154,7 +151,7 @@ class DefaultRedirectInfo(SimpleItem):
         assert('://' in self.url)
         url = urlparse.urljoin(self.url, path)
 
-        logger.info("Default URL for %s is %s" % (obj, url))
+        logger.debug("Default URL for %s is %s" % (obj, url))
         return url
 
 # == subscribers == #
