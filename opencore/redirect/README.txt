@@ -67,6 +67,13 @@ Let's try an extended path::
     HTTP/1.1 302 Moved Temporarily...
     Location: http://redirected/monkey-time/and/more...
 
+Or a different host: 
+    >>> print http(r'''
+    ... GET /test_folder_1_ HTTP/1.1
+    ... Host: moonbase
+    ... ''')
+    HTTP/1.1 302 Moved Temporarily...
+    Location: http://redirected/test_folder_1_...
 
 The redirector determines when to redirect based on
 the Host header.  If we request the object with the
@@ -77,7 +84,26 @@ proper Host header set, there is no redirection.
     ... Host: redirected
     ... ''')
     HTTP/1.1 200 OK...
- 
+
+A redirected object can have several permissable
+aliases that are not the canonical redirect url.
+This is accomplished with a regex pattern:
+
+    >>> info.alias_pattern = "^moonbase$"
+    >>> print http(r'''
+    ... GET /test_folder_1_ HTTP/1.1
+    ... Host: moonbase
+    ... ''')
+    HTTP/1.1 200 OK...
+    
+    >>> info.alias_pattern = ''
+    >>> print http(r'''
+    ... GET /test_folder_1_ HTTP/1.1
+    ... Host: moonbase
+    ... ''')
+    HTTP/1.1 302 Moved Temporarily...
+    Location: http://redirected/test_folder_1_...
+
 
 
 
@@ -113,7 +139,27 @@ The hook will still be setup:
     >>> self.app.__before_traverse__
     {...(1, '__redirection_hook__'): <...AccessRule instance at ...>...}
 
-But now when we visit the test folder, we'll be redirected to
+By default this will allow us to access things through the
+host specified, _or_ localhost.
+
+    >>> print http(r'''
+    ... GET /test_folder_1_ HTTP/1.1
+    ... ''')
+    HTTP/1.1 200 OK...
+
+    >>> print http(r'''
+    ... GET /test_folder_1_ HTTP/1.1
+    ... Host: default
+    ... ''')
+    HTTP/1.1 200 OK...
+
+If we remove the alias_pattern, localhost will also
+produce a redirect.
+
+    >>> default_info.alias_pattern = ''
+
+
+When we visit the test folder, we'll be redirected to
 the default host:
 
     >>> print http(r'''
@@ -145,6 +191,17 @@ If we reactivate with a url, things behave as before:
     ... Host: redirected
     ... ''')
     HTTP/1.1 200 OK...
+
+The default alias pattern will also apply to
+explicitly redirected objects if they have
+no alias pattern set.
+
+    >>> default_info.alias_pattern = '^localhost$'
+    >>> print http(r'''
+    ... GET /test_folder_1_ HTTP/1.1
+    ... ''')
+    HTTP/1.1 200 OK...
+
 
 Deactivation 
 =================================================
