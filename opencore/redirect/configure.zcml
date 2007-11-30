@@ -53,7 +53,7 @@
   <five:traversable class="OFS.Application.Application" />
   <five:traversable class="OFS.Folder.Folder" />
 
-  <include package="zope.app.annotation" />
+  <include package="zope.annotation" />
 
   <five:implements 
      class="OFS.SimpleItem.SimpleItem" 
