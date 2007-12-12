@@ -57,12 +57,12 @@
 
   <five:implements 
      class="OFS.SimpleItem.SimpleItem" 
-     interface="zope.app.annotation.interfaces.IAttributeAnnotatable"
+     interface="zope.annotation.interfaces.IAttributeAnnotatable"
      />
 
   <five:implements 
      class="OFS.Folder.Folder" 
-     interface="zope.app.annotation.interfaces.IAttributeAnnotatable"
+     interface="zope.annotation.interfaces.IAttributeAnnotatable"
      />
 
 </configure>
