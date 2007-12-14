@@ -12,7 +12,8 @@ from zope.interface import alsoProvides
 
 import warnings; warnings.filterwarnings("ignore")
 
-optionflags = doctest.REPORT_ONLY_FIRST_FAILURE | doctest.ELLIPSIS
+#optionflags = doctest.REPORT_ONLY_FIRST_FAILURE | doctest.ELLIPSIS
+optionflags = doctest.ELLIPSIS
 
 def returno(obj, attr):
     def wrap(*args, **kwargs):

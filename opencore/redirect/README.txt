@@ -122,7 +122,7 @@ It can be retrieved using queryUtility
     >>> from zope.component import queryUtility
     >>> default_info = queryUtility(redirect.IDefaultRedirectInfo, context=self.app, default=None)
     >>> default_info
-    <DefaultRedirectInfo at /utilities/>
+    <DefaultRedirectInfo at />
 
 It can be configured similarly to the RedirectInfo::
 
