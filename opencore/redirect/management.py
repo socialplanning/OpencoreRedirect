@@ -2,11 +2,11 @@ from OFS.Folder import Folder
 from Products.Five import BrowserView
 from five.intid.site import addUtility
 from interfaces import IRedirectSetup, IDefaultRedirectInfoSetup, IDefaultRedirectInfo
-from memojito import memoizedproperty
 from opencore import redirect 
 from opencore.redirect import LOG
 from opencore.redirect.classproperty import property as classproperty
 from plone.fieldsets.form import FieldsetsEditForm
+from plone.memoize.instance import memoizedproperty, memoize
 from zope.app.component.interfaces import ISite, IPossibleSite
 from zope.component import adapts, queryUtility
 from zope.component.interfaces import ComponentLookupError
