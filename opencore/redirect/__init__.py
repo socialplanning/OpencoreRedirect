@@ -1,7 +1,7 @@
 from BTrees.OOBTree import OOBTree
 from OFS.SimpleItem import SimpleItem
 from hook import AccessEventHook, enableAccessEventHook, disableAccessEventHook
-from memojito import memoizedproperty
+from plone.memoize.instance import memoizedproperty, memoize
 from opencore.redirect.classproperty import property as classproperty
 from opencore.redirect.interfaces import IRedirectEvent, RedirectEvent, HOOK_NAME
 from opencore.redirect.interfaces import IRedirectInfo, IDefaultRedirectInfo

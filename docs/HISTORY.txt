@@ -2,6 +2,19 @@ Changelog for OpenCoreRedirect
 
     (name of developer listed in brackets)
 
+OpenCoreRedirect - 0.4
+
+    - fix version of plone.fieldsets; they now depend on an
+      incompatible zope version, I think.
+
+OpenCoreRedirect - 0.3 ?
+
+    - nobody bothered to update this file
+
+OpenCoreRedirect - 0.2 ?
+
+    - nobody bothered to update this file
+
 OpenCoreRedirect - 0.1 Unreleased
 
     - Initial package structure.
