@@ -5,7 +5,6 @@ version = '0.4'
 
 deplinks = ["https://svn.plone.org/svn/collective/five.intid/trunk#egg=five.intid-dev",
             "http://svn.plone.org/svn/plone/plone.fieldsets/trunk#egg=plone.fieldsets",
-            "http://svn.plone.org/svn/plone/plone.app.form/branches/plone-3.0#egg=plone.app.form",
             ]
 
 setup(name='OpencoreRedirect',
