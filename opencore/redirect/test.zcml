@@ -10,12 +10,12 @@
   <subscriber handler="opencore.redirect.log_redirect_event" />
   <subscriber handler="opencore.redirect.log_redirect_management_event" />
   <five:implements
-     interface = "zope.app.annotation.IAttributeAnnotatable"
+     interface = "zope.annotation.IAttributeAnnotatable"
      class="OFS.Application.Application"
      />
   <five:implements
-     interface = "zope.app.annotation.interfaces.IAnnotatable"
+     interface = "zope.annotation.interfaces.IAnnotatable"
      class="OFS.Application.Application"
      />
-  <include package="zope.app.annotation" />
+  <include package="zope.annotation" />
 </configure>

@@ -25,15 +25,8 @@ import re
 __all__ = ['get_redirect_info', 'get_redirect_url', 'activate', 'deactivate']
 
 
-try:
-    from zope.interface import noLongerProvides
-except ImportError:
-    from Products.Five.utilities.marker import erase as noLongerProvides
-
-try:
-    from zope.annotation.interfaces import IAnnotations, IAnnotatable
-except ImportError:
-    from zope.app.annotation.interfaces import IAnnotations
+from zope.interface import noLongerProvides
+from zope.app.annotation.interfaces import IAnnotations
 
 
 _marker = object()

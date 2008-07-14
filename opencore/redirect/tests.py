@@ -12,7 +12,8 @@ from zope.interface import alsoProvides
 
 import warnings; warnings.filterwarnings("ignore")
 
-optionflags = doctest.REPORT_ONLY_FIRST_FAILURE | doctest.ELLIPSIS
+#optionflags = doctest.REPORT_ONLY_FIRST_FAILURE | doctest.ELLIPSIS
+optionflags = doctest.ELLIPSIS
 
 def returno(obj, attr):
     def wrap(*args, **kwargs):
@@ -31,7 +32,7 @@ _url = Bag(url='http://localhost')
 def readme_setup(tc):
     tc.new_request = utils.new_request()
     import opencore.redirect
-    from zope.app.annotation.interfaces import IAttributeAnnotatable
+    from zope.annotation.interfaces import IAttributeAnnotatable
     from zope.testing.loggingsupport import InstalledHandler
     zcml.load_config('test.zcml', opencore.redirect)
     tc.new_request.physicalPathFromURL=returno(_ppfu, 'path')
