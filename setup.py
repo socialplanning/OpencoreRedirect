@@ -32,7 +32,7 @@ setup(name='OpencoreRedirect',
       install_requires=[
           "five.intid==dev,>0.1",
           "plone.app.form",
-          "plone.fieldsets==1.0",
+          "plone.fieldsets==1.0",  # Higher than this requires zope.deferredimport which is apparently incompatible with zope 2.9?
           "collective.testing"
       ],
       entry_points="",
