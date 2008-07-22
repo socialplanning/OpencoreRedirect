@@ -2,6 +2,10 @@ Changelog for OpenCoreRedirect
 
     (name of developer listed in brackets)
 
+OpencoreRedirect - 0.5
+
+    - plone 3 compatibility
+
 OpenCoreRedirect - 0.4
 
     - fix version of plone.fieldsets; they now depend on an
