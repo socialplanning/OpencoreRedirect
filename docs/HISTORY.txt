@@ -2,6 +2,15 @@ Changelog for OpenCoreRedirect
 
     (name of developer listed in brackets)
 
+OpenCoreRedirect - 0.4.2dev UNRELEASED
+
+    no changes.
+
+
+OpenCoreRedirect - 0.4.1
+
+    - fix versions of all dependencies for stability. (pw)
+
 OpenCoreRedirect - 0.4
 
     - fix version of plone.fieldsets; they now depend on an
