@@ -3,8 +3,7 @@ import sys, os
 
 version = '0.4'
 
-deplinks = ["https://svn.plone.org/svn/collective/five.intid/trunk#egg=five.intid-dev",
-            "http://svn.plone.org/svn/plone/plone.fieldsets/trunk#egg=plone.fieldsets",
+deplinks = ['http://svn.openplans.org/eggs/',
             ]
 
 setup(name='OpencoreRedirect',
@@ -29,10 +28,10 @@ setup(name='OpencoreRedirect',
       include_package_data=True,
       zip_safe=False,
       install_requires=[
-          "five.intid==dev,>0.1",
-          "plone.app.form",
-          "plone.fieldsets==1.0",
-          "collective.testing"
+          "five.intid==0.2.0",
+          "plone.app.form==0.1dev_r15470", 
+          "plone.fieldsets==1.0", # higher than this requires plone3/zope2.10
+          "collective.testing==0.3"
       ],
       entry_points="",
       dependency_links=deplinks
