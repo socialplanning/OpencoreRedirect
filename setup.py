@@ -30,8 +30,8 @@ setup(name='OpencoreRedirect',
       include_package_data=True,
       zip_safe=False,
       install_requires=[
-          "five.intid==dev,>0.1",
-          "plone.app.form",
+          "five.intid>=0.2.0",
+          "plone.app.form>=0.1dev-r15470",
           "plone.fieldsets==1.0",  # Can probably update this now for plone 3
           "collective.testing>=0.3",  # Don't use collective trunk anymore!
       ],
