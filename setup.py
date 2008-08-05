@@ -33,7 +33,7 @@ setup(name='OpencoreRedirect',
           "five.intid==dev,>0.1",
           "plone.app.form",
           "plone.fieldsets==1.0",  # Can probably update this now for plone 3
-          "collective.testing"
+          "collective.testing>=0.3",  # Don't use collective trunk anymore!
       ],
       entry_points="",
       dependency_links=deplinks
