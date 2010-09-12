@@ -12,8 +12,8 @@ from persistent import Persistent
 from persistent.mapping import PersistentMapping
 from zope import event
 from zope.app.component import queryNextUtility
-from zope.app.traversing.adapters import Traverser, _marker
-from zope.app.traversing.interfaces import ITraverser
+from zope.traversing.adapters import Traverser, _marker
+from zope.traversing.interfaces import ITraverser
 from zope.component import getMultiAdapter, adapts, adapter
 from zope.component import queryUtility, handle
 from zope.interface import implements, alsoProvides, Interface
@@ -26,7 +26,7 @@ __all__ = ['get_redirect_info', 'get_redirect_url', 'activate', 'deactivate']
 
 
 from zope.interface import noLongerProvides
-from zope.app.annotation.interfaces import IAnnotations
+from zope.annotation.interfaces import IAnnotations
 
 
 _marker = object()

@@ -49,10 +49,6 @@
         template="install.pt"
         name="opencore_redirect_install_default" />
 
-  <!-- fivish compat 2.9 bits -->
-  <five:traversable class="OFS.Application.Application" />
-  <five:traversable class="OFS.Folder.Folder" />
-
   <include package="zope.annotation" />
 
   <five:implements 
